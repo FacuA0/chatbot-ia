@@ -94,17 +94,24 @@ p {
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
 code {
+  font-family: var(--mono);
+  color: var(--text-h);
   font-size: 15px;
   line-height: 135%;
-  padding: 4px 8px;
+  padding: 3px 8px;
+  background: var(--code-bg);
+}
+
+pre > code {
+  padding: 0;
+}
+
+pre {
+  padding: 4px 10px;
+}
+
+pre, code {
+  border-radius: 6px;
   background: var(--code-bg);
 }
