@@ -1,5 +1,6 @@
-import { markdown } from "markdown";
 import { useEffect, useRef } from "react";
+import markdownit from "markdown-it";
+import highlightjs from "highlightjs";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
@@ -9,12 +10,12 @@ function ChatMessage({message}) {
     let messageRef = useRef();
 
     useEffect(() => {
-        messageRef.current.outerHTML = markdown.toHTML(message.message);
+        messageRef.current.outerHTML = markdownit().render(message.message);
     }, []);
 
     const isUser = message.role == "user";
 
-    console.log(message);
+    //console.log(message);
 
     const thinkingAccordion = message.thinking ? (
         <Accordion>
