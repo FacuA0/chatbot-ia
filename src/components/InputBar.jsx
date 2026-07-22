@@ -4,7 +4,7 @@ import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import TextField from '@mui/material/TextField'
 
-function InputBar({sendMsg, resetChat, generating}) {
+function InputBar({sendMsg, sendFake, resetChat, generating}) {
     const [promptText, setPromptText] = useState("");
 
     function sendMessage() {
@@ -33,6 +33,10 @@ function InputBar({sendMsg, resetChat, generating}) {
                 variant='contained' 
                 onClick={sendMessage}
                 loading={generating}>Enviar</Button>
+            <Button 
+                variant='outlined' 
+                onClick={() => sendFake(promptText)}
+                loading={generating}>Test</Button>
             <IconButton 
                 title="Reiniciar chat"
                 onClick={resetChat}

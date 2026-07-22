@@ -69,6 +69,24 @@ main {
   text-align: start;
 }
 
+.inner-msg-div .MuiAccordion-root, 
+.inner-msg-div .MuiAccordion-root.Mui-expanded {
+  background-color: #0000;
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.inner-msg-div .MuiAccordionSummary-root {
+  min-height: 0;
+}
+.inner-msg-div .MuiAccordionSummary-content {
+  margin: 10px 0;
+}
+.inner-msg-div .MuiAccordionDetails-root {
+  font-size: 0.9em;
+  padding: 4px 16px 8px;
+}
+
 .hero {
   position: relative;
 
