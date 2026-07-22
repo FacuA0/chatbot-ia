@@ -3,7 +3,7 @@ import Divider from '@mui/material/Divider'
 
 function ChatList({msgList, error}) {
     let chatList = msgList.map(msg => (
-        <ChatMessage key={msg.idx * 2} role={msg.role} message={msg.message}/>
+        <ChatMessage key={msg.idx * 2} message={msg}/>
     ));
 
     for (let i = 1; i < chatList.length; i += 2) {
