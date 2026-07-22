@@ -1,7 +1,7 @@
 import ChatMessage from "./ChatMessage";
 import Divider from '@mui/material/Divider'
 
-function ChatList({msgList, error}) {
+function ChatList({msgList, currentMsg, error}) {
     let chatList = msgList.map(msg => (
         <ChatMessage key={msg.idx * 2} message={msg}/>
     ));
@@ -10,6 +10,12 @@ function ChatList({msgList, error}) {
         chatList.splice(i, 0, <Divider key={i}/>);
     }
 
+    console.log("Updated list", currentMsg);
+
+    const curMsg = currentMsg != null ? (
+        <ChatMessage key={currentMsg.idx} message={currentMsg}/>
+    ) : "";
+
     const errorMsg = error != null ? (
         <div id="msg-error">{error}</div>
     ) : "";
@@ -17,6 +23,7 @@ function ChatList({msgList, error}) {
     return (
         <div id="chat-list">
             {chatList}
+            {curMsg}
             {errorMsg}
         </div>
     );

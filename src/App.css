@@ -69,17 +69,18 @@ main {
   text-align: start;
 }
 
-.inner-msg-div .MuiAccordion-root, 
-.inner-msg-div .MuiAccordion-root.Mui-expanded {
+.inner-msg-div > div.MuiAccordion-root, 
+.inner-msg-div > div.MuiAccordion-root.Mui-expanded {
   background-color: #0000;
   margin-top: 6px;
   margin-bottom: 4px;
 }
 
 .inner-msg-div .MuiAccordionSummary-root {
-  min-height: 0;
+  min-height: 0 !important;
 }
-.inner-msg-div .MuiAccordionSummary-content {
+.inner-msg-div .MuiAccordionSummary-content,
+.inner-msg-div .MuiAccordionSummary-content.Mui-expanded {
   margin: 10px 0;
 }
 .inner-msg-div .MuiAccordionDetails-root {
