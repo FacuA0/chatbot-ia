@@ -10,7 +10,7 @@ function ChatList({msgList, currentMsg, error}) {
         chatList.splice(i, 0, <Divider key={i}/>);
     }
 
-    console.log("Updated list", currentMsg);
+    //console.log("Updated list", currentMsg);
 
     const curMsg = currentMsg != null ? (
         <ChatMessage key={currentMsg.idx} message={currentMsg}/>

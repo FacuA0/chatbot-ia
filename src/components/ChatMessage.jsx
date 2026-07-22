@@ -1,17 +1,32 @@
 import { useEffect, useRef } from "react";
 import markdownit from "markdown-it";
-import highlightjs from "highlightjs";
+import highlight from "highlight.js";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 
+const markdown = markdownit({
+    highlight: function (str, lang) {
+        if (lang && highlight.getLanguage(lang)) {
+            try {
+                return highlight.highlight(str, { language: lang, ignoreIllegals: true }).value;
+            } 
+            catch (_) {}
+        }
+
+        return ''; // use external default escaping
+    }
+});
+
 function ChatMessage({message}) {
     let messageRef = useRef();
 
     useEffect(() => {
-        messageRef.current.outerHTML = markdownit().render(message.message);
-    }, []);
+        let html = markdown.render(message.message);
+        messageRef.current.innerHTML = html;
+        console.log(message.message, "-", html);
+    }, [message]);
 
     const isUser = message.role == "user";
 
