@@ -25,10 +25,15 @@ function ChatMessage({message}) {
     useEffect(() => {
         let html = markdown.render(message.message);
         messageRef.current.innerHTML = html;
-        console.log(message.message, "-", html);
-    }, [message]);
+        //console.log(message.message, "-", html);
+    });
 
     const isUser = message.role == "user";
+    const title = ({
+        user: "User",
+        assistant: "AI",
+        tool: "Tool"
+    })[message.role];
 
     //console.log(message);
 
@@ -46,12 +51,32 @@ function ChatMessage({message}) {
         </Accordion>
     ) : [];
 
+    const tools = message.extra?.tool_calls ? message.extra.tool_calls.map(tool => ({
+        name: tool.function.name,
+        args: JSON.parse(tool.function.arguments)
+    })) : [];
+
+    const toolAccordions = tools.map((tool, tId) => (
+        <Accordion>
+            <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                aria-controls={`${message.idx}-${tId}-panel2-content`}
+                id={`${message.idx}-${tId}-panel2-header`}>
+                Herramienta {tool.name}
+            </AccordionSummary>
+            <AccordionDetails>
+                {`${tool.args.number1} ${tool.args.operator} ${tool.args.number2}`}
+            </AccordionDetails>
+        </Accordion>
+    ));
+
     return (
         <div className={`msg-div ${isUser ? "user-msg" : "ai-msg"}`}>
             <div className="inner-msg-div">
-                <p><b>{isUser ? "User" : "AI"}</b></p>
+                <p><b>{title}</b></p>
                 {thinkingAccordion}
                 <p ref={messageRef}></p>
+                {toolAccordions}
             </div>
         </div>
     );
