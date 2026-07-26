@@ -58,75 +58,55 @@ export async function queryAI(chat, updateCurrent) {
     }
 
     let events = res.clone().body;
-    let decoder = new TextDecoder();
-    let textPart = "", acumThink = "", acumMsg = "", acumTool = [];
+    let acumThink = "", acumMsg = "", acumTool = [];
 
-    for await (const chunk of events) {
-        textPart += decoder.decode(chunk.buffer);
+    for await (const content of getStreamedEvents(events)) {
+        // Terminar stream
+        if (content == "[DONE]") {
+            console.log(4, "[DONE]");
+            return {
+                message: acumMsg,
+                thinking: acumThink,
+                toolCalls: acumTool
+            };
+        }
+        else {
+            let json = JSON.parse(content), choice;
 
-        //console.log(1, textPart);
+            if ((choice = json.choices[0]) && choice.finish_reason == null) {
+                if (choice.delta.reasoning)
+                    acumThink += choice.delta.reasoning;
+                else if (choice.delta.content && choice.delta.content.length > 0)
+                    acumMsg += choice.delta.content;
+                else if (choice.delta.tool_calls) {
+                    let tool_calls = choice.delta.tool_calls;
 
-        while (textPart.indexOf("\n\n") > -1) {
-            let partLines = textPart.substring(0, textPart.indexOf("\n\n")).split("\n");
-            //console.log(2, partLines);
-            if (partLines[0].startsWith("data: ")) {
-                let content = partLines[0].substring(6);
-                for (let i = 1; i < partLines.length; i++) {
-                    if (!partLines[i].startsWith("data: "))
-                        break;
-                    content += "\n" + partLines[i].substring(6);
-                }
-
-                //console.log(3, content);
-
-                // Terminar stream
-                if (content == "[DONE]") {
-                    console.log(4, "[DONE]");
-                    return {
-                        message: acumMsg,
-                        thinking: acumThink,
-                        toolCalls: acumTool
-                    };  
-                }
-                else {
-                    let json = JSON.parse(content), choice;
-
-                    if ((choice = json.choices[0]) && choice.finish_reason == null) {
-                        if (choice.delta.reasoning)
-                            acumThink += choice.delta.reasoning;
-                        else if (choice.delta.content && choice.delta.content.length > 0)
-                            acumMsg += choice.delta.content;
-                        else if (choice.delta.tool_calls) {
-                            let tool_calls = choice.delta.tool_calls;
-                            for (let tool of tool_calls) {
-                                let index = tool.index;
-                                if (!acumTool[index])
-                                    acumTool[index] = {};
-                                apply(acumTool[index], tool);
-                            }
-
-                            function apply(target, source) {
-                                for (let key in source) {
-                                    if (target[key]) {
-                                        if (typeof target[key] == "string")
-                                            target[key] += source[key];
-                                        else if (typeof target[key] == "object" && target[key] !== null)
-                                            apply(target[key], source[key]);
-                                        else target[key] = source[key];
-                                    }
-                                    else target[key] = source[key];
-                                }
-                            }
-                        }
+                    for (let tool of tool_calls) {
+                        let index = tool.index;
+                        if (!acumTool[index])
+                            acumTool[index] = {};
                         
-                        updateCurrent(acumMsg, acumThink, acumTool);
+                        apply(acumTool[index], tool);
                     }
 
-                    console.log(4, json.choices, acumThink, "-", acumMsg, "-", acumTool);
+                    function apply(target, source) {
+                        for (let key in source) {
+                            if (target[key]) {
+                                if (typeof target[key] == "string")
+                                    target[key] += source[key];
+                                else if (typeof target[key] == "object" && target[key] !== null)
+                                    apply(target[key], source[key]);
+                                else target[key] = source[key];
+                            }
+                            else target[key] = source[key];
+                        }
+                    }
                 }
+                
+                updateCurrent(acumMsg, acumThink, acumTool);
             }
 
-            textPart = textPart.substring(textPart.indexOf("\n\n") + 2);
+            console.log(4, json.choices, acumThink, "-", acumMsg, "-", acumTool.slice());
         }
     }
 
@@ -180,4 +160,42 @@ export async function generateFakeAnswer(text, updateCurrent) {
     function wait(ms) {
         return new Promise(res => setTimeout(res, ms));
     }
+}
+
+async function* getStreamedEvents(events) {
+    let decoder = new TextDecoder();
+    let textPart = "", done = false;
+
+    for await (const chunk of events) {
+        textPart += decoder.decode(chunk.buffer);
+
+        //console.debug(1, textPart);
+
+        while (textPart.indexOf("\n\n") > -1) {
+            let partLines = textPart.substring(0, textPart.indexOf("\n\n")).split("\n");
+            //console.debug(2, partLines);
+            if (partLines[0].startsWith("data: ")) {
+                let content = partLines[0].substring(6);
+                for (let i = 1; i < partLines.length; i++) {
+                    if (!partLines[i].startsWith("data: "))
+                        break;
+                    content += "\n" + partLines[i].substring(6);
+                }
+
+                //console.debug(3, content);
+
+                // CONTENIDO
+
+                if (content == "[DONE]")
+                    done = true;
+
+                yield content;
+            }
+
+            textPart = textPart.substring(textPart.indexOf("\n\n") + 2);
+        }
+    }
+
+    if (!done)
+        throw new Error("Unexpected end of stream without [DONE] mark.");
 }
