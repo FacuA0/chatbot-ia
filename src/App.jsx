@@ -113,9 +113,7 @@ function App() {
                 if (ans.toolCalls.length > 0) {
                     iterate = true;
 
-                    let randomCalls = [...ans.toolCalls].sort((a, b) => Math.random() < 0.5 ? -1 : 1)
-                    
-                    for (let call of randomCalls) {
+                    for (let call of ans.toolCalls) {
                         if (call.type != "function") continue;
                         if (call.function.name == "calculate_numbers") {
                             let params = JSON.parse(call.function.arguments);
@@ -151,7 +149,9 @@ function App() {
             role: "assistant",
             message: msg,
             thinking: think,
-            tools: calls
+            extra: {
+                tool_calls: calls
+            }
         });
     }
 

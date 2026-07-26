@@ -21,10 +21,15 @@ const markdown = markdownit({
 
 function ChatMessage({message}) {
     let messageRef = useRef();
+    let thinkingRef = useRef();
 
     useEffect(() => {
         let html = markdown.render(message.message);
         messageRef.current.innerHTML = html;
+        if (message.thinking) {
+            let thinkHtml = markdown.render(message.thinking);
+            thinkingRef.current.outerHTML = thinkHtml;
+        }
         //console.log(message.message, "-", html);
     });
 
@@ -46,15 +51,36 @@ function ChatMessage({message}) {
                 Razonamiento
             </AccordionSummary>
             <AccordionDetails>
-                {message.thinking}
+                <p ref={thinkingRef}></p>
             </AccordionDetails>
         </Accordion>
     ) : [];
 
-    const tools = message.extra?.tool_calls ? message.extra.tool_calls.map(tool => ({
-        name: tool.function.name,
-        args: JSON.parse(tool.function.arguments)
-    })) : [];
+    const tools = message.extra?.tool_calls ? message.extra.tool_calls.map(tool => {
+        let args, content, loading = false;
+        try {
+            args = JSON.parse(tool.function.arguments);
+            if (tool.function.name == "calculate_numbers") {
+                content = `${args.number1} ${args.operator} ${args.number2}`;
+            }
+            else {
+                content = Object.entries(args).map(e => e.join(": ")).join(", ");
+            }
+        }
+        catch (err) {
+            console.assert(err.message.startsWith("JSON.parse"), err);
+            loading = true;
+            content = "Cargando...";
+        }
+
+        return {
+            name: tool.function.name,
+            args: content,
+            loading
+        }
+    }) : [];
+
+    console.log(Object.assign({}, message), tools.slice());
 
     const toolAccordions = tools.map((tool, tId) => (
         <Accordion>
@@ -62,10 +88,10 @@ function ChatMessage({message}) {
                 expandIcon={<ExpandMoreIcon />}
                 aria-controls={`${message.idx}-${tId}-panel2-content`}
                 id={`${message.idx}-${tId}-panel2-header`}>
-                Herramienta {tool.name}
+                Herramienta {tool.name} {tool.loading ? "(cargando...)" : ""}
             </AccordionSummary>
             <AccordionDetails>
-                {`${tool.args.number1} ${tool.args.operator} ${tool.args.number2}`}
+                {tool.args}
             </AccordionDetails>
         </Accordion>
     ));
