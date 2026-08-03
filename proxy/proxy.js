@@ -6,6 +6,8 @@ import https from "https";
 const TARGET_URL = new URL("https://opencode.ai/zen/v1/chat/completions");
 
 const server = http.createServer((req, res) => {
+    let startedRes = false;
+
     // CORS
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "*");
@@ -36,6 +38,8 @@ const server = http.createServer((req, res) => {
             res.statusCode = proxyRes.statusCode;
             res.statusMessage = proxyRes.statusMessage;
 
+            startedRes = true;
+
             // Reflejar cabeceras
             for (const [key, value] of Object.entries(proxyRes.headers)) {
                 if (value !== undefined) {
@@ -53,11 +57,16 @@ const server = http.createServer((req, res) => {
 
     proxyReq.on("error", (err) => {
         console.error(err);
-        res.writeHead(502, {
-            "Content-Type": "text/plain",
-            "Access-Control-Allow-Origin": "*",
-        });
-        res.end("Bad Gateway");
+        if (!startedRes) {
+            res.writeHead(502, {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+            });
+            res.end('{"error": {"message": "502 Bad Gateway"}}');
+        }
+        else {
+            res.destroy();
+        }
     });
 
     // Pasar el body del cliente al servidor destino
