@@ -28,6 +28,22 @@ function App() {
         //console.debug("added msg", message, "- think", thinking);
     }
 
+    function regenerateSince(index) {
+        let prevMsgs = messageList.slice(0, messageList.findLastIndex(msg => msg.idx == index));
+        if (prevMsgs.length == 0) return;
+    
+        setMessageList(prevMsgs);
+        generateAnswer(prevMsgs);
+    }
+
+    function tryAgain() {
+        let prevMsgs = messageList.slice(0, messageList.findLastIndex(msg => msg.role == "user") + 1);
+        if (prevMsgs.length == 0) return;
+
+        setMessageList(prevMsgs);
+        generateAnswer(prevMsgs);
+    }
+
     function resetChat() {
         setMessageList([]);
         setGenerating(false);
@@ -35,49 +51,15 @@ function App() {
         setError(null);
     }
     
-    async function sendFakeMessage(text) {
+    function sendFakeMessage(text) {
         let msgList = [...messageList];
         addMessage(msgList, "user", text);
         setMessageList(msgList);
-        setGenerating(true);
-        setError(null);
-
-        let iterate = false;
         
-        try {
-            do {
-                let ans = await generateFakeAnswer(text, updateCurrent);
-
-                setCurMessage(null);
-                let toolCallsObj = ans.toolCalls ? {tool_calls: ans.toolCalls} : {}
-                addMessage(msgList, "assistant", ans.message, ans.thinking, toolCallsObj);
-                setMessageList(msgList);
-                if (ans.toolCalls) {
-                    iterate = true;
-                    
-                    for (let call of ans.toolCalls) {
-                        if (call.type != "function") continue;
-                        if (call.function.name == "calculate_numbers") {
-                            let params = JSON.parse(call.function.arguments);
-                            let answer = eval(`${params.number1} ${params.operator} ${params.number2}`);
-                            addMessage(msgList, "tool", answer + "", null, {
-                                toolId: call.id
-                            });
-                            setMessageList(msgList);
-                        }
-                    }
-                }
-                else {
-                    setGenerating(false);
-                    iterate = false;
-                }
-            } while (iterate);
-        }
-        catch (err) {
-            setError("There was an error making the request. Try again. Error: " + err.message);
-            console.error(err);
-            setGenerating(false);
-        }
+        generateAnswer(msgList, {
+            fake: true, 
+            text
+        });
 
         /*
         let res = await generateFakeAnswer(text, updateCurrent);
@@ -88,12 +70,17 @@ function App() {
         setGenerating(false);*/
     }
 
-    async function sendMessage(text) {
+    function sendMessage(text) {
         let msgList = [...messageList];
         //console.debug("One ", JSON.stringify(msgList));
         addMessage(msgList, "user", text);
         setMessageList(msgList);
         console.debug("Two ", JSON.stringify(msgList));
+        
+        generateAnswer(msgList);
+    }
+
+    async function generateAnswer(msgList, options) {
         setGenerating(true);
         setError(null);
         
@@ -102,7 +89,11 @@ function App() {
         try {
             do {
                 //console.debug("Three ", JSON.stringify(msgList));
-                let ans = await queryAI(msgList, updateCurrent);
+                let ans;
+                if (options?.fake)
+                    ans = await generateFakeAnswer(options.text, updateCurrent);
+                else
+                    ans = await queryAI(msgList, updateCurrent);
                 
                 //console.debug("Four ", JSON.stringify(msgList));
                 setCurMessage(null);
@@ -129,18 +120,19 @@ function App() {
                     }
                 }
                 else {
-                    setGenerating(false);
                     iterate = false;
                     //console.debug("Eight ", JSON.stringify(msgList));
                 }
             } while (iterate);
+
             console.debug("Nine ", JSON.stringify(msgList));
         }
         catch (err) {
-            setError("There was an error making the request. Try again. Error: " + err.message);
+            setError(err.message);
             console.error(err);
-            setGenerating(false);
         }
+
+        setGenerating(false);
     }
         
     function updateCurrent(msg, think, calls) {
@@ -155,11 +147,13 @@ function App() {
         });
     }
 
+    const actions = {tryAgain, regenerateSince};
+
     return (
         <main>
             <h1>Chatbot IA</h1>
 
-            <ChatList msgList={messageList} currentMsg={curMessage} error={error}/>
+            <ChatList msgList={messageList} currentMsg={curMessage} error={error} actions={actions}/>
             <InputBar sendMsg={sendMessage} sendFake={sendFakeMessage} resetChat={resetChat} generating={generating}/>
         </main>
     );

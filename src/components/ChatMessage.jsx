@@ -5,6 +5,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
+import { IconButton } from "@mui/material";
+import ReplayIcon from '@mui/icons-material/Replay';
 
 const markdown = markdownit({
     highlight: function (str, lang) {
@@ -19,7 +21,7 @@ const markdown = markdownit({
     }
 });
 
-function ChatMessage({message}) {
+function ChatMessage({message, actions}) {
     let messageRef = useRef();
     let thinkingRef = useRef();
 
@@ -80,7 +82,7 @@ function ChatMessage({message}) {
         }
     }) : [];
 
-    console.log(Object.assign({}, message), tools.slice());
+    //console.log(Object.assign({}, message), tools.slice());
 
     const toolAccordions = tools.map((tool, tId) => (
         <Accordion>
@@ -95,6 +97,15 @@ function ChatMessage({message}) {
             </AccordionDetails>
         </Accordion>
     ));
+    
+    const msgActions = actions && message.role == "assistant" ? [
+        <IconButton
+            title="Rehacer respuesta"
+            onClick={() => actions.regenerateSince(message.idx)}
+            disabled={false}>
+            <ReplayIcon/>
+        </IconButton>
+    ] : [];
 
     return (
         <div className={`msg-div ${isUser ? "user-msg" : "ai-msg"}`}>
@@ -103,6 +114,7 @@ function ChatMessage({message}) {
                 {thinkingAccordion}
                 <p ref={messageRef}></p>
                 {toolAccordions}
+                {msgActions}
             </div>
         </div>
     );

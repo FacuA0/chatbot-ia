@@ -88,6 +88,11 @@ main {
   padding: 4px 16px 8px;
 }
 
+#msg-error span {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .hero {
   position: relative;
 
