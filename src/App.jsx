@@ -107,15 +107,36 @@ function App() {
                     for (let call of ans.toolCalls) {
                         if (call.type != "function") continue;
                         if (call.function.name == "calculate_numbers") {
-                            let params = JSON.parse(call.function.arguments);
-                            let startAns = `${params.number1} ${params.operator} ${params.number2}`;
-                            let answer = startAns + " = " + eval(startAns);
-                            //console.debug("Six ", JSON.stringify(msgList));
-                            addMessage(msgList, "tool", answer, null, {
-                                tool_call_id: call.id
-                            });
-                            setMessageList(msgList);
-                            //console.debug("Seven ", JSON.stringify(msgList));
+                            try {
+                                let params = JSON.parse(call.function.arguments);
+
+                                if (!Number.isFinite(params.number1) || !Number.isFinite(params.number2))
+                                    throw new Error("Operand(s) aren't a number or aren't finite.");
+                                else if (!["+", "-", "*", "/"].includes(params.operator))
+                                    throw new Error("Invalid operator.");
+                                else if (params.operator == "/" && params.number2 == 0)
+                                    throw new Error("Cannot divide by zero.");
+
+                                let startAns = `${params.number1} ${params.operator} ${params.number2}`;
+                                let answer = startAns + " = " + eval(startAns);
+                                //console.debug("Six ", JSON.stringify(msgList));
+                                addMessage(msgList, "tool", answer, null, {
+                                    tool_call_id: call.id
+                                });
+                                setMessageList(msgList);
+                                //console.debug("Seven ", JSON.stringify(msgList));
+                            }
+                            catch (err) {
+                                let errMsg = err.message;
+                                if (errMsg.includes("JSON.parse")) {
+                                    errMsg = "Malformed JSON parameters object.";
+                                }
+
+                                addMessage(msgList, "tool", "Tool error: " + errMsg, null, {
+                                    tool_call_id: call.id
+                                });
+                                setMessageList(msgList);
+                            }
                         }
                     }
                 }
@@ -153,8 +174,17 @@ function App() {
         <main>
             <h1>Chatbot IA</h1>
 
-            <ChatList msgList={messageList} currentMsg={curMessage} error={error} actions={actions}/>
-            <InputBar sendMsg={sendMessage} sendFake={sendFakeMessage} resetChat={resetChat} generating={generating}/>
+            <ChatList
+                msgList={messageList}
+                currentMsg={curMessage}
+                error={error}
+                generating={generating}
+                actions={actions}/>
+            <InputBar
+                sendMsg={sendMessage}
+                sendFake={sendFakeMessage}
+                resetChat={resetChat}
+                generating={generating}/>
         </main>
     );
 }

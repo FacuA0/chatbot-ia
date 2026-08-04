@@ -74,8 +74,8 @@ export async function queryAI(chat, updateCurrent) {
             let json = JSON.parse(content), choice;
 
             if ((choice = json.choices[0]) && choice.finish_reason == null) {
-                if (choice.delta.reasoning)
-                    acumThink += choice.delta.reasoning;
+                if (choice.delta.reasoning_content)
+                    acumThink += choice.delta.reasoning_content;
                 else if (choice.delta.content && choice.delta.content.length > 0)
                     acumMsg += choice.delta.content;
                 else if (choice.delta.tool_calls) {
@@ -121,15 +121,15 @@ export async function generateFakeAnswer(text, updateCurrent) {
     let thinkTokens = finalThink.split(" ").map((t, i) => i == 0 ? t : (" " + t));
 
     // Thinking
-    await wait(2000);
+    await wait(1600);
 
-    let waitTime = 30;
+    let thinkWaitTime = 500;
     
     let newAcum = "";
     for (let i = 0; i < thinkTokens.length; i++) {
         newAcum += thinkTokens[i];
         updateCurrent("", newAcum);
-        await wait(waitTime);
+        await wait(thinkWaitTime);
     }
     /*
     newAcum = "";
@@ -139,23 +139,32 @@ export async function generateFakeAnswer(text, updateCurrent) {
         await wait(waitTime);
     }*/
 
-    res = "";
-    
-    return {
-        message: res,
-        thinking: finalThink,
-        toolCalls: [
-            {
-                "index": 0,
-                "id": "call_70fc0a0807564d4e9fcaf36a",
-                "type": "function",
-                "function": {
-                    "name": "calculate_numbers",
-                    "arguments": "{\"number1\": 5, \"operator\": \"+\", \"number2\": 6}"
+    res = "Hola.";
+
+    if (Math.random() < 0.5) {
+        return {
+            message: res,
+            thinking: finalThink,
+            toolCalls: [
+                {
+                    "index": 0,
+                    "id": "call_70fc0a0807564d4e9fcaf36a",
+                    "type": "function",
+                    "function": {
+                        "name": "calculate_numbers",
+                        "arguments": "{\"number1\": 5, \"operator\": \"+\", \"number2\": 6}"
+                    }
                 }
-            }
-        ]
-    };
+            ]
+        };
+    }
+    else {
+        return {
+            message: res,
+            thinking: finalThink,
+            toolCalls: []
+        };
+    }
     
     function wait(ms) {
         return new Promise(res => setTimeout(res, ms));

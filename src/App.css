@@ -65,10 +65,6 @@ main {
   align-items: start;
 }
 
-.msg-div p, .msg-div p * {
-  text-align: start;
-}
-
 .inner-msg-div > div.MuiAccordion-root, 
 .inner-msg-div > div.MuiAccordion-root.Mui-expanded {
   background-color: #0000;
