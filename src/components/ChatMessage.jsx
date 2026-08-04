@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import markdownit from "markdown-it";
+import texmath from "markdown-it-texmath";
+import katex from "katex";
 import highlight from "highlight.js";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Accordion from '@mui/material/Accordion';
@@ -19,9 +21,15 @@ const markdown = markdownit({
 
         return ''; // use external default escaping
     }
+}).use(texmath, {
+    engine: katex,
+    delimiters: 'dollars',
+    katexOptions: { 
+        macros: {"\\RR": "\\mathbb{R}"} 
+    }
 });
 
-function ChatMessage({message, actions}) {
+function ChatMessage({message, generating, actions}) {
     let messageRef = useRef();
     let thinkingRef = useRef();
 
@@ -30,7 +38,7 @@ function ChatMessage({message, actions}) {
         messageRef.current.innerHTML = html;
         if (message.thinking) {
             let thinkHtml = markdown.render(message.thinking);
-            thinkingRef.current.outerHTML = thinkHtml;
+            thinkingRef.current.innerHTML = thinkHtml;
         }
         //console.log(message.message, "-", html);
     });
@@ -72,7 +80,7 @@ function ChatMessage({message, actions}) {
         catch (err) {
             console.assert(err.message.startsWith("JSON.parse"), err);
             loading = true;
-            content = "Cargando...";
+            content = "Cargando... (" + tool?.function?.arguments + ")";
         }
 
         return {
@@ -82,7 +90,7 @@ function ChatMessage({message, actions}) {
         }
     }) : [];
 
-    //console.log(Object.assign({}, message), tools.slice());
+    //console.log("Message", Object.assign({}, message), tools.slice());
 
     const toolAccordions = tools.map((tool, tId) => (
         <Accordion>
@@ -98,14 +106,15 @@ function ChatMessage({message, actions}) {
         </Accordion>
     ));
     
-    const msgActions = actions && message.role == "assistant" ? [
+    const msgActions = actions && message.role == "assistant" ? (
         <IconButton
             title="Rehacer respuesta"
             onClick={() => actions.regenerateSince(message.idx)}
-            disabled={false}>
-            <ReplayIcon/>
+            disabled={generating}
+            size="small">
+            <ReplayIcon fontSize="inherit"/>
         </IconButton>
-    ] : [];
+    ) : (<></>);
 
     return (
         <div className={`msg-div ${isUser ? "user-msg" : "ai-msg"}`}>
