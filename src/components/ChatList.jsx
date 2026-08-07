@@ -1,7 +1,8 @@
 import ChatMessage from "./ChatMessage";
+import ActionLink from "./ActionLink";
 import Divider from '@mui/material/Divider'
 
-function ChatList({msgList, currentMsg, error, generating, actions}) {
+function ChatList({msgList, currentMsg, error, generating, actions, highlight}) {
     /*let newMsgList = [];
     for (let i = 0; i < msgList.length - 1; i++) {
         if (msgList[i].toolCalls && msgList[i + 1].tool)
@@ -14,7 +15,8 @@ function ChatList({msgList, currentMsg, error, generating, actions}) {
             key={msg.idx * 2}
             message={msg}
             generating={generating}
-            actions={actions}/>
+            actions={actions}
+            highlight={highlight}/>
     ));
 
     for (let i = 1; i < chatList.length; i += 2) {
@@ -30,7 +32,7 @@ function ChatList({msgList, currentMsg, error, generating, actions}) {
 
     const errorMsg = error != null ? (
         <div id="msg-error">
-            There was an error making the request. <span onClick={tryAgain}>Try again.</span> Error: {error}
+            There was an error making the request. <ActionLink action={tryAgain}>Try again.</ActionLink> Error: {error}
         </div>
     ) : "";
 

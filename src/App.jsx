@@ -8,10 +8,12 @@ import './App.css'
 import { generateFakeAnswer, queryAI } from './utils'
 
 function App() {
-    const [generating, setGenerating] = useState(false);
+    const [generation, setGeneration] = useState(null);
     const [curMessage, setCurMessage] = useState(null);
     const [error, setError] = useState(null);
     const [messageList, setMessageList] = useState([]);
+    const [highlight, setHighlight] = useState(null);
+    const [edition, setEdition] = useState(null);
 
     //let newLists = [...messageList];
 
@@ -26,6 +28,31 @@ function App() {
         });
         console.debug("new newlsts " + JSON.stringify(msgList));
         //console.debug("added msg", message, "- think", thinking);
+    }
+
+    function editMessage(msgIdx) {
+        const msg = messageList.find(msg => msg.idx == msgIdx);
+        setEdition({
+            idx: msgIdx,
+            text: msg.message
+        });
+    }
+
+    function goToEdit() {
+        setHighlight(edition.idx);
+        setTimeout(() => {
+            setHighlight(null);
+        }, 1500);
+    }
+
+    function stopEditing() {
+        setEdition(null);
+    }
+
+    function stopGeneration() {
+        if (generation) {
+            generation.abort();
+        }
     }
 
     function regenerateSince(index) {
@@ -46,7 +73,8 @@ function App() {
 
     function resetChat() {
         setMessageList([]);
-        setGenerating(false);
+        setGeneration(null);
+        setEdition(null);
         setCurMessage(null);
         setError(null);
     }
@@ -72,16 +100,23 @@ function App() {
 
     function sendMessage(text) {
         let msgList = [...messageList];
+        if (edition != null) {
+            msgList = msgList.slice(0, edition.idx);
+            setEdition(null);
+        }
+
         //console.debug("One ", JSON.stringify(msgList));
         addMessage(msgList, "user", text);
         setMessageList(msgList);
+
         console.debug("Two ", JSON.stringify(msgList));
         
         generateAnswer(msgList);
     }
 
     async function generateAnswer(msgList, options) {
-        setGenerating(true);
+        let abort = new AbortController();
+        setGeneration(abort);
         setError(null);
         
         let iterate = false;
@@ -91,17 +126,18 @@ function App() {
                 //console.debug("Three ", JSON.stringify(msgList));
                 let ans;
                 if (options?.fake)
-                    ans = await generateFakeAnswer(options.text, updateCurrent);
+                    ans = await generateFakeAnswer(options.text, updateCurrent, abort.signal);
                 else
-                    ans = await queryAI(msgList, updateCurrent);
+                    ans = await queryAI(msgList, updateCurrent, abort.signal);
                 
                 //console.debug("Four ", JSON.stringify(msgList));
                 setCurMessage(null);
                 let toolCallsObj = ans.toolCalls.length > 0 ? {tool_calls: ans.toolCalls} : {}
                 addMessage(msgList, "assistant", ans.message, ans.thinking, toolCallsObj);
                 setMessageList(msgList);
+
                 //console.debug("Five ", JSON.stringify(msgList));
-                if (ans.toolCalls.length > 0) {
+                if (ans.toolCalls.length > 0 && !abort.signal.aborted) {
                     iterate = true;
 
                     for (let call of ans.toolCalls) {
@@ -149,11 +185,13 @@ function App() {
             console.debug("Nine ", JSON.stringify(msgList));
         }
         catch (err) {
-            setError(err.message);
-            console.error(err);
+            if (!err.toString().includes("AbortError")) {
+                setError(err.message);
+                console.error(err);
+            }
         }
 
-        setGenerating(false);
+        setGeneration(null);
     }
         
     function updateCurrent(msg, think, calls) {
@@ -168,7 +206,7 @@ function App() {
         });
     }
 
-    const actions = {tryAgain, regenerateSince};
+    const actions = {tryAgain, regenerateSince, editMessage};
 
     return (
         <main>
@@ -178,13 +216,18 @@ function App() {
                 msgList={messageList}
                 currentMsg={curMessage}
                 error={error}
-                generating={generating}
-                actions={actions}/>
+                generating={generation != null}
+                actions={actions}
+                highlight={highlight}/>
             <InputBar
                 sendMsg={sendMessage}
                 sendFake={sendFakeMessage}
                 resetChat={resetChat}
-                generating={generating}/>
+                stopGen={stopGeneration}
+                stopEdit={stopEditing}
+                goToEdit={goToEdit}
+                generating={generation != null}
+                edition={edition}/>
         </main>
     );
 }
