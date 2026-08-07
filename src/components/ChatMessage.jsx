@@ -3,12 +3,13 @@ import markdownit from "markdown-it";
 import texmath from "markdown-it-texmath";
 import katex from "katex";
 import highlight from "highlight.js";
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import { IconButton } from "@mui/material";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ReplayIcon from '@mui/icons-material/Replay';
+import EditIcon from '@mui/icons-material/Edit';
 
 const markdown = markdownit({
     highlight: function (str, lang) {
@@ -24,24 +25,15 @@ const markdown = markdownit({
 }).use(texmath, {
     engine: katex,
     delimiters: 'dollars',
-    katexOptions: { 
+    katexOptions: {
         macros: {"\\RR": "\\mathbb{R}"} 
     }
 });
 
-function ChatMessage({message, generating, actions}) {
+function ChatMessage({message, generating, actions, highlight}) {
     let messageRef = useRef();
     let thinkingRef = useRef();
-
-    useEffect(() => {
-        let html = markdown.render(message.message);
-        messageRef.current.innerHTML = html;
-        if (message.thinking) {
-            let thinkHtml = markdown.render(message.thinking);
-            thinkingRef.current.innerHTML = thinkHtml;
-        }
-        //console.log(message.message, "-", html);
-    });
+    let msgRef = useRef();
 
     const isUser = message.role == "user";
     const title = ({
@@ -106,7 +98,7 @@ function ChatMessage({message, generating, actions}) {
         </Accordion>
     ));
     
-    const msgActions = actions && message.role == "assistant" ? (
+    const msgActions = actions && (message.role == "assistant" ? (
         <IconButton
             title="Rehacer respuesta"
             onClick={() => actions.regenerateSince(message.idx)}
@@ -114,10 +106,36 @@ function ChatMessage({message, generating, actions}) {
             size="small">
             <ReplayIcon fontSize="inherit"/>
         </IconButton>
-    ) : (<></>);
+    ) : message.role == "user" ? (
+        <IconButton
+            title="Editar mensaje"
+            onClick={() => actions.editMessage(message.idx)}
+            disabled={generating}
+            size="small">
+            <EditIcon fontSize="inherit"/>
+        </IconButton>
+    ) : (<></>));
+
+    useEffect(() => {
+        let html = markdown.render(message.message);
+        messageRef.current.innerHTML = html;
+        if (message.thinking) {
+            let thinkHtml = markdown.render(message.thinking);
+            thinkingRef.current.innerHTML = thinkHtml;
+        }
+        //console.log(message.message, "-", html);
+    });
+
+    const highlighted = highlight === message.idx;
+
+    useEffect(() => {
+        if (highlighted) {
+            msgRef.current.scrollIntoView();
+        }
+    }, [highlight]);
 
     return (
-        <div className={`msg-div ${isUser ? "user-msg" : "ai-msg"}`}>
+        <div className={`msg-div ${isUser ? "user-msg" : "ai-msg"}${highlighted ? " highlighted" : ""}`} ref={msgRef}>
             <div className="inner-msg-div">
                 <p><b>{title}</b></p>
                 {thinkingAccordion}

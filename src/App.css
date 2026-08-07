@@ -30,6 +30,16 @@ main {
 #chat-list {
   flex: 1;
   overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+#editing-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 6px;
+  gap: 6px;
+  background-color: #7772;
+  border-radius: 6px;
 }
 
 #input-bar {
@@ -50,6 +60,11 @@ main {
 .msg-div {
   display: flex;
   flex-direction: column;
+  transition: background-color 0.5s ease-in-out;
+}
+
+.msg-div.highlighted {
+  background-color: #FF02;
 }
 
 .inner-msg-div {
@@ -84,9 +99,18 @@ main {
   padding: 4px 16px 8px;
 }
 
-#msg-error span {
+a.action-link {
+  color: inherit;
   text-decoration: underline;
-  cursor: pointer;
+  transition: color 0.1s ease-out;
+}
+
+a.action-link:hover {
+  color: color-mix(in srgb-linear, currentColor 100%, #FFF 12%);
+}
+
+a.action-link:active {
+  color: color-mix(in srgb-linear, currentColor 100%, #FFF 40%);
 }
 
 .hero {
