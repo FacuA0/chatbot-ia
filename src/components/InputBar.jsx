@@ -3,9 +3,11 @@ import ActionLink from './ActionLink'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import TextField from '@mui/material/TextField'
+import Tooltip from "@mui/material/Tooltip";
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import StopIcon from '@mui/icons-material/Stop';
+import SmallIconButton from './SmallIconButton'
 
 function InputBar({sendMsg, sendFake, resetChat, stopGen, stopEdit, goToEdit, generating, edition}) {
     const [promptText, setPromptText] = useState("");
@@ -29,28 +31,26 @@ function InputBar({sendMsg, sendFake, resetChat, stopGen, stopEdit, goToEdit, ge
     }
 
     const iconBtn = generating ? (
-        <IconButton 
-            title="Detener"
-            onClick={stopGen}>
-            <StopIcon/>
-        </IconButton>
+        <Tooltip title="Detener">
+            <IconButton onClick={stopGen}>
+                <StopIcon/>
+            </IconButton>
+        </Tooltip>
     ) : (
-        <IconButton 
-            title="Reiniciar chat"
-            onClick={resetChat}>
-            <DeleteIcon/>
-        </IconButton>
+        <Tooltip title="Borrar chat">
+            <IconButton onClick={resetChat}>
+                <DeleteIcon/>
+            </IconButton>
+        </Tooltip>
     )
 
     const editingBar = edition != null ? (
         <div id='editing-bar'>
             <p><ActionLink action={goToEdit}>Editando mensaje</ActionLink></p>
-            <IconButton 
+            <SmallIconButton
                 title="Dejar de editar"
                 onClick={stopEdit}
-                size='small'>
-                <CloseIcon fontSize='inherit'/>
-            </IconButton>
+                icon={CloseIcon}/>
         </div>
     ) : (<></>);
 
