@@ -6,10 +6,11 @@ import highlight from "highlight.js";
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
-import { IconButton } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ReplayIcon from '@mui/icons-material/Replay';
 import EditIcon from '@mui/icons-material/Edit';
+import CopyIcon from '@mui/icons-material/ContentCopy';
+import SmallIconButton from "./SmallIconButton";
 
 const markdown = markdownit({
     highlight: function (str, lang) {
@@ -33,7 +34,7 @@ const markdown = markdownit({
 function ChatMessage({message, generating, actions, highlight}) {
     let messageRef = useRef();
     let thinkingRef = useRef();
-    let msgRef = useRef();
+    let msgDivRef = useRef();
 
     const isUser = message.role == "user";
     const title = ({
@@ -41,6 +42,20 @@ function ChatMessage({message, generating, actions, highlight}) {
         assistant: "AI",
         tool: "Tool"
     })[message.role];
+
+    async function copyMessage() {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(message.message);
+        }
+        else {
+            let prevContentEditable = messageRef.current.contentEditable;
+            messageRef.current.contentEditable = "true";
+            messageRef.current.focus();
+            document.execCommand("selectAll", false);
+            document.execCommand("copy", false);
+            messageRef.current.contentEditable = prevContentEditable;
+        }
+    }
 
     //console.log(message);
 
@@ -98,23 +113,27 @@ function ChatMessage({message, generating, actions, highlight}) {
         </Accordion>
     ));
     
-    const msgActions = actions && (message.role == "assistant" ? (
-        <IconButton
-            title="Rehacer respuesta"
+    const msgActions = actions && (message.role == "assistant" ? (<>
+        <SmallIconButton
+            title="Copiar"
+            onClick={copyMessage}
+            icon={CopyIcon} />
+        <SmallIconButton
+            title="Regenerar"
             onClick={() => actions.regenerateSince(message.idx)}
             disabled={generating}
-            size="small">
-            <ReplayIcon fontSize="inherit"/>
-        </IconButton>
-    ) : message.role == "user" ? (
-        <IconButton
-            title="Editar mensaje"
+            icon={ReplayIcon} />
+    </>) : message.role == "user" ? (<>
+        <SmallIconButton
+            title="Copiar"
+            onClick={copyMessage}
+            icon={CopyIcon} />
+        <SmallIconButton
+            title="Editar"
             onClick={() => actions.editMessage(message.idx)}
             disabled={generating}
-            size="small">
-            <EditIcon fontSize="inherit"/>
-        </IconButton>
-    ) : (<></>));
+            icon={EditIcon} />
+    </>) : (<></>));
 
     useEffect(() => {
         let html = markdown.render(message.message);
@@ -130,12 +149,12 @@ function ChatMessage({message, generating, actions, highlight}) {
 
     useEffect(() => {
         if (highlighted) {
-            msgRef.current.scrollIntoView();
+            msgDivRef.current.scrollIntoView();
         }
     }, [highlight]);
 
     return (
-        <div className={`msg-div ${isUser ? "user-msg" : "ai-msg"}${highlighted ? " highlighted" : ""}`} ref={msgRef}>
+        <div className={`msg-div ${isUser ? "user-msg" : "ai-msg"}${highlighted ? " highlighted" : ""}`} ref={msgDivRef}>
             <div className="inner-msg-div">
                 <p><b>{title}</b></p>
                 {thinkingAccordion}
