@@ -39,6 +39,51 @@ export async function queryAI(chat, updateCurrent, abort) {
                     },
                     strict: true
                 }
+            },/*
+            {
+                type: "function",
+                function: {
+                    name: "serious_calculator",
+                    description: "Reaaally serious calculator...",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            number1: {
+                                type: "number",
+                                description: "First serious operand to calculate."
+                            },
+                            operator: {
+                                type: "string",
+                                enum: ["+", "-", "*", "/"],
+                                description: "The very serious operator used to calculate."
+                            },
+                            number2: {
+                                type: "number",
+                                description: "Second ultra serious operand to calculate."
+                            }
+                        },
+                        required: ["number1", "operator", "number2"]
+                    },
+                    strict: true
+                }
+            },*/
+            {
+                type: "function",
+                function: {
+                    name: "web_request",
+                    description: "Make a GET request to a custom URL and get a status line and its response body",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            url: {
+                                type: "string",
+                                description: "The URL to request to."
+                            }
+                        },
+                        required: ["url"]
+                    },
+                    strict: true
+                }
             }
         ],
         stream: true
@@ -93,11 +138,12 @@ export async function queryAI(chat, updateCurrent, abort) {
                     }
                 }
             }
+            //console.debug(4, json.choices, acumThink, "-", acumMsg, "-", acumTool.slice());
             
             updateCurrent(acumMsg, acumThink, acumTool);
         }
 
-        console.log(4, json.choices, acumThink, "-", acumMsg, "-", acumTool.slice());
+        //console.debug(4, json.choices, acumThink, "-", acumMsg, "-", acumTool.slice());
     }
 
     return {

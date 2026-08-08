@@ -89,9 +89,6 @@ h2 {
     font-size: 20px;
   }
 }
-p {
-  margin: 0;
-}
 
 code {
   font-family: var(--mono);
