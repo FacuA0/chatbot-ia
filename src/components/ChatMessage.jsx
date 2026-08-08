@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import markdownit from "markdown-it";
 import texmath from "markdown-it-texmath";
 import katex from "katex";
@@ -35,6 +35,8 @@ function ChatMessage({message, generating, actions, highlight}) {
     let messageRef = useRef();
     let thinkingRef = useRef();
     let msgDivRef = useRef();
+    let htmlMsg = useMemo(() => markdown.render(message.message ?? ""), [message.message]);
+    let htmlThink = useMemo(() => markdown.render(message.thinking ?? ""), [message.thinking]);
 
     const isUser = message.role == "user";
     const title = ({
@@ -80,6 +82,12 @@ function ChatMessage({message, generating, actions, highlight}) {
             if (tool.function.name == "calculate_numbers") {
                 content = `${args.number1} ${args.operator} ${args.number2}`;
             }
+            else if (tool.function.name == "web_request") {
+                content = args.url;
+            }/*
+            else if (tool.function.name == "serious_calculator") {
+                content = `${args.number1} ${args.operator} ${args.number2}`;
+            }*/
             else {
                 content = Object.entries(args).map(e => e.join(": ")).join(", ");
             }
@@ -135,17 +143,19 @@ function ChatMessage({message, generating, actions, highlight}) {
             icon={EditIcon} />
     </>) : (<></>));
 
+    const highlighted = highlight === message.idx;
+
     useEffect(() => {
-        let html = markdown.render(message.message);
-        messageRef.current.innerHTML = html;
+        //let html = markdown.render(message.message);
+        //console.log("text", html);
+        messageRef.current.innerHTML = htmlMsg;
         if (message.thinking) {
-            let thinkHtml = markdown.render(message.thinking);
-            thinkingRef.current.innerHTML = thinkHtml;
+            //let thinkHtml = markdown.render(message.thinking);
+            //console.log("think", thinkHtml);
+            thinkingRef.current.innerHTML = htmlThink;
         }
         //console.log(message.message, "-", html);
     });
-
-    const highlighted = highlight === message.idx;
 
     useEffect(() => {
         if (highlighted) {
@@ -155,11 +165,13 @@ function ChatMessage({message, generating, actions, highlight}) {
 
     return (
         <div className={`msg-div ${isUser ? "user-msg" : "ai-msg"}${highlighted ? " highlighted" : ""}`} ref={msgDivRef}>
-            <div className="inner-msg-div">
-                <p><b>{title}</b></p>
-                {thinkingAccordion}
+            <p><b>{title}</b></p>
+            {thinkingAccordion}
+            <div className="inner-msg-div" ref={messageRef}>
                 <p ref={messageRef}></p>
-                {toolAccordions}
+            </div>
+            {toolAccordions}
+            <div>
                 {msgActions}
             </div>
         </div>

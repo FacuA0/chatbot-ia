@@ -142,17 +142,18 @@ function App() {
 
                     for (let call of ans.toolCalls) {
                         if (call.type != "function") continue;
-                        if (call.function.name == "calculate_numbers") {
-                            try {
-                                let params = JSON.parse(call.function.arguments);
 
+                        try {
+                            let params = JSON.parse(call.function.arguments);
+
+                            if (call.function.name == "calculate_numbers") {
                                 if (!Number.isFinite(params.number1) || !Number.isFinite(params.number2))
                                     throw new Error("Operand(s) aren't a number or aren't finite.");
                                 else if (!["+", "-", "*", "/"].includes(params.operator))
                                     throw new Error("Invalid operator.");
                                 else if (params.operator == "/" && params.number2 == 0)
                                     throw new Error("Cannot divide by zero.");
-
+    
                                 let startAns = `${params.number1} ${params.operator} ${params.number2}`;
                                 let answer = startAns + " = " + eval(startAns);
                                 //console.debug("Six ", JSON.stringify(msgList));
@@ -161,18 +162,57 @@ function App() {
                                 });
                                 setMessageList(msgList);
                                 //console.debug("Seven ", JSON.stringify(msgList));
-                            }
-                            catch (err) {
-                                let errMsg = err.message;
-                                if (errMsg.includes("JSON.parse")) {
-                                    errMsg = "Malformed JSON parameters object.";
-                                }
+                            }/*
+                            else if (call.function.name == "serious_calculator") {
+                                if (!Number.isFinite(params.number1) || !Number.isFinite(params.number2))
+                                    throw new Error("Operand(s) aren't a number or aren't finite.");
+                                else if (!["+", "-", "*", "/"].includes(params.operator))
+                                    throw new Error("Invalid operator.");
+                                else if (params.operator == "/" && params.number2 == 0)
+                                    throw new Error("Cannot divide by zero.");
+                                else if (params.number2 > 1000)
+                                    throw new Error("Number 2 is greater than 1000.");
+                                else if (params.number2 < 0)
+                                    throw new Error("Number 2 is negative.");
 
-                                addMessage(msgList, "tool", "Tool error: " + errMsg, null, {
+                                let animals = ["Elefante", "León", "Foca", "Girafa", "Perro", "Delfín", "Gato", "Ballena", "Rinoceronte", "Tigre"]
+    
+                                let startAns = `${params.number1} ${params.operator} ${params.number2}`;
+                                let answer = startAns + " = " + new Array(Math.round(params.number2)).fill(animals[Math.round(Math.abs(params.number1)) % animals.length]).join(" ");
+                                //console.debug("Six ", JSON.stringify(msgList));
+                                addMessage(msgList, "tool", answer, null, {
+                                    tool_call_id: call.id
+                                });
+                                setMessageList(msgList);
+                                //console.debug("Seven ", JSON.stringify(msgList));
+                            }*/
+                            else if (call.function.name == "web_request") {
+                                if (typeof params.url != "string")
+                                    throw new Error("Invalid URL param: not a string or doesn't exist.");
+                                let url = new URL(params.url);
+
+                                let webRes = await fetch(url, {
+                                    signal: abort.signal
+                                });
+                                let body = await webRes.text();
+
+                                let answer = webRes.status + " " + webRes.statusText + "\n\n" + body;
+                                addMessage(msgList, "tool", answer, null, {
                                     tool_call_id: call.id
                                 });
                                 setMessageList(msgList);
                             }
+                        }
+                        catch (err) {
+                            let errMsg = err.message;
+                            if (errMsg.includes("JSON.parse")) {
+                                errMsg = "Malformed JSON parameters object.";
+                            }
+
+                            addMessage(msgList, "tool", "Tool error: " + errMsg, null, {
+                                tool_call_id: call.id
+                            });
+                            setMessageList(msgList);
                         }
                     }
                 }
