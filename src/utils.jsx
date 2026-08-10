@@ -1,6 +1,6 @@
-export async function queryAI(chat, updateCurrent, abort) {
+export async function queryAI(chat, model, updateCurrent, abort) {
     let opts = {
-        model: "big-pickle",
+        model: model ?? "big-pickle",
         messages: [
             {
                 role: "system",
@@ -89,7 +89,7 @@ export async function queryAI(chat, updateCurrent, abort) {
         stream: true
     };
 
-    let res = await fetch("http://localhost:5174", {
+    let res = await fetch("http://localhost:5174/https://opencode.ai/zen/v1/chat/completions", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -109,9 +109,15 @@ export async function queryAI(chat, updateCurrent, abort) {
     for await (const content of getStreamedEvents(events)) {
         let json = JSON.parse(content), choice;
 
+        if (json.error) {
+            throw new Error(json.error.message ?? json.error);
+        }
+
         if ((choice = json.choices[0]) && choice.finish_reason == null) {
             if (choice.delta.reasoning_content)
                 acumThink += choice.delta.reasoning_content;
+            else if (choice.delta.reasoning)
+                acumThink += choice.delta.reasoning;
             else if (choice.delta.content && choice.delta.content.length > 0)
                 acumMsg += choice.delta.content;
             else if (choice.delta.tool_calls) {
@@ -127,12 +133,17 @@ export async function queryAI(chat, updateCurrent, abort) {
 
                 function apply(target, source) {
                     for (let key in source) {
-                        if (target[key]) {
-                            if (typeof target[key] == "string")
-                                target[key] += source[key];
+                        if (target[key] !== undefined) {
+                            /* OpenCode's longcat provider passes null to string-kind param ends but
+                            for type it's always "function" */
+                            if (typeof target[key] == "string") {
+                                if (typeof source[key] == "string" && key != "type")
+                                    target[key] += source[key];
+                            }
                             else if (typeof target[key] == "object" && target[key] !== null)
                                 apply(target[key], source[key]);
-                            else target[key] = source[key];
+                            else if (source[key] != null)
+                                target[key] = source[key];
                         }
                         else target[key] = source[key];
                     }
@@ -216,6 +227,17 @@ export async function generateFakeAnswer(text, updateCurrent, abort) {
             }, ms);
         });
     }
+}
+
+export async function getModels() {
+    let res = await fetch("http://localhost:5174/https://opencode.ai/zen/v1/models");
+    let json = await res.json();
+
+    let models = (json.data ?? [])
+        .map(e => e.id)
+        .filter(e => e.includes("free") || e == "big-pickle");
+    
+    return models;
 }
 
 async function* getStreamedEvents(events) {

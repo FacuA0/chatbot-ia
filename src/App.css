@@ -17,7 +17,7 @@
   }
 }
 
-main > h1 {
+header > h1 {
   text-align: center;
 }
 
@@ -27,12 +27,23 @@ main {
   height: 100vh;
 }
 
+/*
+ * <ChatList> component
+ */
 #chat-list {
   flex: 1;
   overflow-y: auto;
   scroll-behavior: smooth;
 }
 
+#msg-error {
+  color: red;
+  font-weight: bold;
+}
+
+/*
+ * <InputBar> component
+ */
 #editing-bar {
   display: flex;
   justify-content: space-between;
@@ -52,11 +63,9 @@ main {
   flex: 1;
 }
 
-#msg-error {
-  color: red;
-  font-weight: bold;
-}
-
+/*
+ * <ChatMessage> component
+ */
 .msg-div {
   display: flex;
   flex-direction: column;
@@ -69,22 +78,6 @@ main {
   background-color: #FF02;
 }
 
-p {
-  margin: 0;
-}
-
-.inner-msg-div p {
-  margin: revert;
-}
-
-.inner-msg-div > *:first-child {
-  margin-top: 0;
-}
-
-.inner-msg-div > *:last-child {
-  margin-bottom: 0;
-}
-
 .user-msg {
   align-items: end;
 }
@@ -93,8 +86,24 @@ p {
   align-items: start;
 }
 
-.msg-div > div.MuiAccordion-root, 
-.msg-div > div.MuiAccordion-root.Mui-expanded {
+p {
+  margin: 0;
+}
+
+.message-div p {
+  margin: revert;
+}
+
+.message-div > *:first-child {
+  margin-top: 0;
+}
+
+.message-div > *:last-child {
+  margin-bottom: 0;
+}
+
+.msg-inner-div > div.MuiAccordion-root, 
+.msg-inner-div > div.MuiAccordion-root.Mui-expanded {
   background-color: #0000;
   margin-top: 8px;
   margin-bottom: 6px;
@@ -112,6 +121,9 @@ p {
   padding: 4px 16px 8px;
 }
 
+/*
+ * <ActionLink> component
+ */
 a.action-link {
   color: inherit;
   text-decoration: underline;

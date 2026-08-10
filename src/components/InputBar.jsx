@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
-import ActionLink from './ActionLink'
-import Button from '@mui/material/Button'
-import IconButton from '@mui/material/IconButton'
-import TextField from '@mui/material/TextField'
+import { useEffect, useRef, useState } from 'react';
+import ActionLink from './ActionLink';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import TextField from '@mui/material/TextField';
 import Tooltip from "@mui/material/Tooltip";
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import StopIcon from '@mui/icons-material/Stop';
-import SmallIconButton from './SmallIconButton'
+import SmallIconButton from './SmallIconButton';
 
 function InputBar({sendMsg, sendFake, resetChat, stopGen, stopEdit, goToEdit, generating, edition}) {
     const [promptText, setPromptText] = useState("");
