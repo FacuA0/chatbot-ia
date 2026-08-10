@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
+import TopMenu from './components/TopMenu'
 import ChatList from './components/ChatList'
 import InputBar from './components/InputBar'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import './App.css'
-import { generateFakeAnswer, queryAI } from './utils'
+import { generateFakeAnswer, getModels, queryAI } from './utils'
 
 function App() {
+    const [models, setModels] = useState([]);
+    const [modelSelected, setModelSelected] = useState(-1);
     const [generation, setGeneration] = useState(null);
     const [curMessage, setCurMessage] = useState(null);
     const [error, setError] = useState(null);
@@ -19,15 +22,22 @@ function App() {
 
     function addMessage(msgList, role, message, thinking, extra = {}) {
         console.debug("Adding msg", message, "- think", thinking);
-        msgList.push({
+
+        let reasoning = thinking != null ? {reasoning_content: thinking} : {};
+        let newList = [...msgList, {
             idx: msgList.length,
             role,
             message,
             thinking,
-            extra
-        });
+            extra: {
+                ...extra,
+                ...reasoning
+            }
+        }];
         console.debug("new newlsts " + JSON.stringify(msgList));
         //console.debug("added msg", message, "- think", thinking);
+
+        return newList;
     }
 
     function editMessage(msgIdx) {
@@ -36,6 +46,13 @@ function App() {
             idx: msgIdx,
             text: msg.message
         });
+    }
+
+    function exportChat() {
+        let a = document.createElement("a");
+        a.download = "ai-chat.json";
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(messageList)]));
+        a.click();
     }
 
     function goToEdit() {
@@ -80,22 +97,13 @@ function App() {
     }
     
     function sendFakeMessage(text) {
-        let msgList = [...messageList];
-        addMessage(msgList, "user", text);
+        let msgList = addMessage(messageList, "user", text);
         setMessageList(msgList);
         
         generateAnswer(msgList, {
             fake: true, 
             text
         });
-
-        /*
-        let res = await generateFakeAnswer(text, updateCurrent);
-        
-        addMessage(msgList, "assistant", res.message, res.thinking);
-        setMessageList(msgList);
-        setCurMessage(null);
-        setGenerating(false);*/
     }
 
     function sendMessage(text) {
@@ -106,10 +114,10 @@ function App() {
         }
 
         //console.debug("One ", JSON.stringify(msgList));
-        addMessage(msgList, "user", text);
+        msgList = addMessage(msgList, "user", text);
         setMessageList(msgList);
 
-        console.debug("Two ", JSON.stringify(msgList));
+        //console.debug("Two ", JSON.stringify(msgList));
         
         generateAnswer(msgList);
     }
@@ -128,12 +136,12 @@ function App() {
                 if (options?.fake)
                     ans = await generateFakeAnswer(options.text, updateCurrent, abort.signal);
                 else
-                    ans = await queryAI(msgList, updateCurrent, abort.signal);
+                    ans = await queryAI(msgList, models[modelSelected], updateCurrent, abort.signal);
                 
                 //console.debug("Four ", JSON.stringify(msgList));
                 setCurMessage(null);
                 let toolCallsObj = ans.toolCalls.length > 0 ? {tool_calls: ans.toolCalls} : {}
-                addMessage(msgList, "assistant", ans.message, ans.thinking, toolCallsObj);
+                msgList = addMessage(msgList, "assistant", ans.message, ans.thinking, toolCallsObj);
                 setMessageList(msgList);
 
                 //console.debug("Five ", JSON.stringify(msgList));
@@ -157,7 +165,7 @@ function App() {
                                 let startAns = `${params.number1} ${params.operator} ${params.number2}`;
                                 let answer = startAns + " = " + eval(startAns);
                                 //console.debug("Six ", JSON.stringify(msgList));
-                                addMessage(msgList, "tool", answer, null, {
+                                msgList = addMessage(msgList, "tool", answer, null, {
                                     tool_call_id: call.id
                                 });
                                 setMessageList(msgList);
@@ -191,16 +199,19 @@ function App() {
                                     throw new Error("Invalid URL param: not a string or doesn't exist.");
                                 let url = new URL(params.url);
 
-                                let webRes = await fetch(url, {
+                                let webRes = await fetch("http://localhost:5174/" + url, {
                                     signal: abort.signal
                                 });
                                 let body = await webRes.text();
 
                                 let answer = webRes.status + " " + webRes.statusText + "\n\n" + body;
-                                addMessage(msgList, "tool", answer, null, {
+                                msgList = addMessage(msgList, "tool", answer, null, {
                                     tool_call_id: call.id
                                 });
                                 setMessageList(msgList);
+                            }
+                            else {
+                                throw new Error("Invalid tool name: " + call.function.name);
                             }
                         }
                         catch (err) {
@@ -209,7 +220,7 @@ function App() {
                                 errMsg = "Malformed JSON parameters object.";
                             }
 
-                            addMessage(msgList, "tool", "Tool error: " + errMsg, null, {
+                            msgList = addMessage(msgList, "tool", "Tool error: " + errMsg, null, {
                                 tool_call_id: call.id
                             });
                             setMessageList(msgList);
@@ -246,11 +257,33 @@ function App() {
         });
     }
 
+    useEffect(() => {
+        getModels()
+        .then(newModels => {
+            setModels(newModels);
+    
+            let selModel = newModels.findIndex(e => e == "big-pickle");
+            if (selModel == -1) selModel = 0;
+            setModelSelected(selModel);
+        })
+        .catch(err => {
+            err.noRetry = true;
+            setError(err);
+        });
+    }, []);
+
     const actions = {tryAgain, regenerateSince, editMessage};
 
     return (
         <main>
-            <h1>Chatbot IA</h1>
+            <header>
+                <h1>Chatbot IA</h1>
+                <TopMenu 
+                    models={models}
+                    selected={modelSelected}
+                    selModel={setModelSelected}
+                    exportChat={exportChat}/>
+            </header>
 
             <ChatList
                 msgList={messageList}

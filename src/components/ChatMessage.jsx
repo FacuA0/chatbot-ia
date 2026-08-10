@@ -108,7 +108,7 @@ function ChatMessage({message, generating, actions, highlight}) {
     //console.log("Message", Object.assign({}, message), tools.slice());
 
     const toolAccordions = tools.map((tool, tId) => (
-        <Accordion>
+        <Accordion key={tId}>
             <AccordionSummary
                 expandIcon={<ExpandMoreIcon />}
                 aria-controls={`${message.idx}-${tId}-panel2-content`}
@@ -165,14 +165,14 @@ function ChatMessage({message, generating, actions, highlight}) {
 
     return (
         <div className={`msg-div ${isUser ? "user-msg" : "ai-msg"}${highlighted ? " highlighted" : ""}`} ref={msgDivRef}>
-            <p><b>{title}</b></p>
-            {thinkingAccordion}
-            <div className="inner-msg-div" ref={messageRef}>
-                <p ref={messageRef}></p>
-            </div>
-            {toolAccordions}
-            <div>
-                {msgActions}
+            <div className="msg-inner-div">
+                <p><b>{title}</b></p>
+                {thinkingAccordion}
+                <div className="message-div" ref={messageRef}></div>
+                {toolAccordions}
+                <div>
+                    {msgActions}
+                </div>
             </div>
         </div>
     );

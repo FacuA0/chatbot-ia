@@ -3,7 +3,7 @@
 import http from "http";
 import https from "https";
 
-const TARGET_URL = new URL("https://opencode.ai/zen/v1/chat/completions");
+//const TARGET_URL = new URL("https://opencode.ai/zen/v1/chat/completions");
 
 const server = http.createServer((req, res) => {
     let startedRes = false;
@@ -19,18 +19,31 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    const client = TARGET_URL.protocol === "https:" ? https : http;
+    let targetUrl;
+    try {
+        targetUrl = new URL(req.url.slice(1));
+        if (!["http:", "https:"].includes(targetUrl.protocol))
+            throw new Error("Invalid protocol");
+    }
+    catch (err) {
+        console.error("Error while handling URL (" + req.url.slice(1) + ") - " + err);
+        res.writeHead(400);
+        res.end("Invalid URL.");
+        return;
+    }
+
+    const client = targetUrl.protocol === "https:" ? https : http;
 
     const proxyReq = client.request(
         {
-            protocol: TARGET_URL.protocol,
-            hostname: TARGET_URL.hostname,
-            port: TARGET_URL.port || undefined,
+            protocol: targetUrl.protocol,
+            hostname: targetUrl.hostname,
+            port: targetUrl.port || undefined,
             method: req.method,
-            path: TARGET_URL.pathname + TARGET_URL.search,
+            path: targetUrl.pathname + targetUrl.search,
             headers: {
                 ...req.headers,
-                host: TARGET_URL.host,
+                host: targetUrl.host,
             },
         },
         (proxyRes) => {
