@@ -94,9 +94,8 @@ code {
   font-family: var(--mono);
   color: var(--text-h);
   font-size: 15px;
-  line-height: 135%;
-  padding: 3px 8px;
-  background: var(--code-bg);
+  line-height: 100%;
+  padding: 2px 8px;
 }
 
 pre > code {

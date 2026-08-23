@@ -1,3 +1,4 @@
+import { memo } from "react";
 import ChatMessage from "./ChatMessage";
 import ActionLink from "./ActionLink";
 import Divider from '@mui/material/Divider'
@@ -47,4 +48,4 @@ function ChatList({msgList, currentMsg, error, generating, actions, highlight}) 
     );
 }
 
-export default ChatList;
+export default memo(ChatList);
