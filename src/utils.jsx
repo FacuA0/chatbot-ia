@@ -103,7 +103,7 @@ export async function queryAI(chat, model, updateCurrent, abort) {
         throw new Error(body?.error?.message ?? body ?? res.statusText);
     }
 
-    let events = res.clone().body;
+    let events = res.body;
     let acumThink = "", acumMsg = "", acumTool = [];
 
     for await (const content of getStreamedEvents(events)) {
@@ -178,7 +178,11 @@ export async function generateFakeAnswer(text, updateCurrent, abort) {
         .flatMap((tl, i) => i == 0 ? tl : ["    ", ...tl])
         .filter(t => t != "");
 
-    let thinkTokens = finalThink.split(" ").map((t, i) => i == 0 ? t : (" " + t));
+    let thinkTokens = finalThink
+        .split("    ")
+        .map(str => str.split(" ").map((t, i) => i == 0 ? t : (" " + t)))
+        .flatMap((tl, i) => i == 0 ? tl : ["    ", ...tl])
+        .filter(t => t != "");
 
     // Thinking
     await wait(1600, abort);

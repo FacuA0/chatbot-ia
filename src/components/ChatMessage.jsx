@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, memo } from "react";
 import markdownit from "markdown-it";
 import texmath from "markdown-it-texmath";
 import katex from "katex";
@@ -155,7 +155,7 @@ function ChatMessage({message, generating, actions, highlight}) {
             thinkingRef.current.innerHTML = htmlThink;
         }
         //console.log(message.message, "-", html);
-    });
+    }, [htmlMsg, htmlThink]);
 
     useEffect(() => {
         if (highlighted) {
@@ -178,4 +178,4 @@ function ChatMessage({message, generating, actions, highlight}) {
     );
 }
 
-export default ChatMessage;
+export default memo(ChatMessage);

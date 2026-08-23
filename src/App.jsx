@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import TopMenu from './components/TopMenu'
 import ChatList from './components/ChatList'
 import InputBar from './components/InputBar'
@@ -17,36 +17,10 @@ function App() {
     const [messageList, setMessageList] = useState([]);
     const [highlight, setHighlight] = useState(null);
     const [edition, setEdition] = useState(null);
+    const pendingRef = useRef(null);
+    const rafRef = useRef(null);
 
     //let newLists = [...messageList];
-
-    function addMessage(msgList, role, message, thinking, extra = {}) {
-        console.debug("Adding msg", message, "- think", thinking);
-
-        let reasoning = thinking != null ? {reasoning_content: thinking} : {};
-        let newList = [...msgList, {
-            idx: msgList.length,
-            role,
-            message,
-            thinking,
-            extra: {
-                ...extra,
-                ...reasoning
-            }
-        }];
-        console.debug("new newlsts " + JSON.stringify(msgList));
-        //console.debug("added msg", message, "- think", thinking);
-
-        return newList;
-    }
-
-    function editMessage(msgIdx) {
-        const msg = messageList.find(msg => msg.idx == msgIdx);
-        setEdition({
-            idx: msgIdx,
-            text: msg.message
-        });
-    }
 
     function exportChat() {
         let a = document.createElement("a");
@@ -54,6 +28,30 @@ function App() {
         a.href = URL.createObjectURL(new Blob([JSON.stringify(messageList)]));
         a.click();
     }
+
+    const editMessage = useCallback((msgIdx) => {
+        const msg = messageList.find(msg => msg.idx == msgIdx);
+        setEdition({
+            idx: msgIdx,
+            text: msg.message
+        });
+    }, [messageList]);
+
+    const regenerateSince = useCallback((index) => {
+        let prevMsgs = messageList.slice(0, messageList.findLastIndex(msg => msg.idx == index));
+        if (prevMsgs.length == 0) return;
+    
+        setMessageList(prevMsgs);
+        generateAnswer(prevMsgs);
+    }, [messageList, modelSelected]);
+
+    const tryAgain = useCallback(() => {
+        let prevMsgs = messageList.slice(0, messageList.findLastIndex(msg => msg.role == "user") + 1);
+        if (prevMsgs.length == 0) return;
+
+        setMessageList(prevMsgs);
+        generateAnswer(prevMsgs);
+    }, [messageList, modelSelected]);
 
     function goToEdit() {
         setHighlight(edition.idx);
@@ -72,28 +70,32 @@ function App() {
         }
     }
 
-    function regenerateSince(index) {
-        let prevMsgs = messageList.slice(0, messageList.findLastIndex(msg => msg.idx == index));
-        if (prevMsgs.length == 0) return;
-    
-        setMessageList(prevMsgs);
-        generateAnswer(prevMsgs);
-    }
-
-    function tryAgain() {
-        let prevMsgs = messageList.slice(0, messageList.findLastIndex(msg => msg.role == "user") + 1);
-        if (prevMsgs.length == 0) return;
-
-        setMessageList(prevMsgs);
-        generateAnswer(prevMsgs);
-    }
-
     function resetChat() {
         setMessageList([]);
         setGeneration(null);
         setEdition(null);
         setCurMessage(null);
         setError(null);
+    }
+
+    function addMessage(msgList, role, message, thinking, extra = {}) {
+        console.debug("Adding msg", message, "- think", thinking);
+
+        let reasoning = thinking != null ? {reasoning_content: thinking} : {};
+        let newList = [...msgList, {
+            idx: msgList.length,
+            role,
+            message,
+            thinking,
+            extra: {
+                ...extra,
+                ...reasoning
+            }
+        }];
+        //console.debug("new newlists " + JSON.stringify(msgList));
+        //console.debug("added msg", message, "- think", thinking);
+
+        return newList;
     }
     
     function sendFakeMessage(text) {
@@ -139,7 +141,9 @@ function App() {
                     ans = await queryAI(msgList, models[modelSelected], updateCurrent, abort.signal);
                 
                 //console.debug("Four ", JSON.stringify(msgList));
+                cancelUpdates();
                 setCurMessage(null);
+                
                 let toolCallsObj = ans.toolCalls.length > 0 ? {tool_calls: ans.toolCalls} : {}
                 msgList = addMessage(msgList, "assistant", ans.message, ans.thinking, toolCallsObj);
                 setMessageList(msgList);
@@ -233,9 +237,10 @@ function App() {
                 }
             } while (iterate);
 
-            console.debug("Nine ", JSON.stringify(msgList));
+            //console.debug("Nine ", JSON.stringify(msgList));
         }
         catch (err) {
+            cancelUpdates();
             if (!err.toString().includes("AbortError")) {
                 setError(err.message);
                 console.error(err);
@@ -246,15 +251,35 @@ function App() {
     }
         
     function updateCurrent(msg, think, calls) {
-        setCurMessage({
-            idx: 2147483647,
-            role: "assistant",
-            message: msg,
-            thinking: think,
-            extra: {
-                tool_calls: calls
-            }
+        pendingRef.current = { msg, think, calls };
+        if (rafRef.current != null)
+            return;
+
+        rafRef.current = requestAnimationFrame(() => {
+            rafRef.current = null;
+            if (!pendingRef.current) 
+                return;
+
+            let { msg, think, calls } = pendingRef.current;
+            pendingRef.current = null;
+            setCurMessage({
+                idx: 2147483647,
+                role: "assistant",
+                message: msg,
+                thinking: think,
+                extra: {
+                    tool_calls: calls?.map(call => structuredClone(call))
+                }
+            });
         });
+    }
+
+    function cancelUpdates() {
+        if (rafRef.current != null) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+        }
+        pendingRef.current = null;
     }
 
     useEffect(() => {
@@ -272,7 +297,9 @@ function App() {
         });
     }, []);
 
-    const actions = {tryAgain, regenerateSince, editMessage};
+    const actions = useMemo(() => (
+        {tryAgain, regenerateSince, editMessage}
+    ), [tryAgain, regenerateSince, editMessage]);
 
     return (
         <main>

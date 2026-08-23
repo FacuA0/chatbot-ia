@@ -17,8 +17,19 @@
   }
 }
 
+header {
+  display: flex;
+  align-items: center;
+}
+
 header > h1 {
   text-align: center;
+  flex: 1;
+  margin-left: 48px;
+}
+
+#menu {
+  margin-right: 8px;
 }
 
 main {
@@ -90,8 +101,17 @@ p {
   margin: 0;
 }
 
+.msg-inner-div {
+  max-width: 100%;
+}
+
 .message-div p {
   margin: revert;
+}
+
+.message-div * {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .message-div > *:first-child {
