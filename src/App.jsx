@@ -138,7 +138,7 @@ function App() {
                 if (options?.fake)
                     ans = await generateFakeAnswer(options.text, updateCurrent, abort.signal);
                 else
-                    ans = await queryAI(msgList, models[modelSelected], updateCurrent, abort.signal);
+                    ans = await queryAI(msgList, models[modelSelected].id, updateCurrent, abort.signal);
                 
                 //console.debug("Four ", JSON.stringify(msgList));
                 cancelUpdates();
@@ -167,7 +167,7 @@ function App() {
                                     throw new Error("Cannot divide by zero.");
     
                                 let startAns = `${params.number1} ${params.operator} ${params.number2}`;
-                                let answer = startAns + " = " + eval(startAns);
+                                let answer = startAns + " = " + window.eval(startAns);
                                 //console.debug("Six ", JSON.stringify(msgList));
                                 msgList = addMessage(msgList, "tool", answer, null, {
                                     tool_call_id: call.id

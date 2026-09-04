@@ -1,4 +1,79 @@
 export async function queryAI(chat, model, updateCurrent, abort) {
+    let tools = [
+        {
+            type: "function",
+            function: {
+                name: "calculate_numbers",
+                description: "Do a basic calculation with any pair of two numbers and basic operators",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        number1: {
+                            type: "number",
+                            description: "First operand to calculate."
+                        },
+                        operator: {
+                            type: "string",
+                            enum: ["+", "-", "*", "/"],
+                            description: "The operator used to calculate."
+                        },
+                        number2: {
+                            type: "number",
+                            description: "Second operand to calculate."
+                        }
+                    },
+                    required: ["number1", "operator", "number2"]
+                },
+                strict: true
+            }
+        },/*
+        {
+            type: "function",
+            function: {
+                name: "serious_calculator",
+                description: "Reaaally serious calculator...",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        number1: {
+                            type: "number",
+                            description: "First serious operand to calculate."
+                        },
+                        operator: {
+                            type: "string",
+                            enum: ["+", "-", "*", "/"],
+                            description: "The very serious operator used to calculate."
+                        },
+                        number2: {
+                            type: "number",
+                            description: "Second ultra serious operand to calculate."
+                        }
+                    },
+                    required: ["number1", "operator", "number2"]
+                },
+                strict: true
+            }
+        },*/
+        {
+            type: "function",
+            function: {
+                name: "web_request",
+                description: "Make a GET request to a custom URL and get a status line and its response body",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        url: {
+                            type: "string",
+                            description: "The URL to request to."
+                        }
+                    },
+                    required: ["url"]
+                },
+                strict: true
+            }
+        }
+    ];
+
     let opts = {
         model: model ?? "big-pickle",
         messages: [
@@ -12,80 +87,7 @@ export async function queryAI(chat, model, updateCurrent, abort) {
                 ...msg.extra
             }))
         ],
-        tools: [
-            {
-                type: "function",
-                function: {
-                    name: "calculate_numbers",
-                    description: "Do a basic calculation with any pair of two numbers and basic operators",
-                    parameters: {
-                        type: "object",
-                        properties: {
-                            number1: {
-                                type: "number",
-                                description: "First operand to calculate."
-                            },
-                            operator: {
-                                type: "string",
-                                enum: ["+", "-", "*", "/"],
-                                description: "The operator used to calculate."
-                            },
-                            number2: {
-                                type: "number",
-                                description: "Second operand to calculate."
-                            }
-                        },
-                        required: ["number1", "operator", "number2"]
-                    },
-                    strict: true
-                }
-            },/*
-            {
-                type: "function",
-                function: {
-                    name: "serious_calculator",
-                    description: "Reaaally serious calculator...",
-                    parameters: {
-                        type: "object",
-                        properties: {
-                            number1: {
-                                type: "number",
-                                description: "First serious operand to calculate."
-                            },
-                            operator: {
-                                type: "string",
-                                enum: ["+", "-", "*", "/"],
-                                description: "The very serious operator used to calculate."
-                            },
-                            number2: {
-                                type: "number",
-                                description: "Second ultra serious operand to calculate."
-                            }
-                        },
-                        required: ["number1", "operator", "number2"]
-                    },
-                    strict: true
-                }
-            },*/
-            {
-                type: "function",
-                function: {
-                    name: "web_request",
-                    description: "Make a GET request to a custom URL and get a status line and its response body",
-                    parameters: {
-                        type: "object",
-                        properties: {
-                            url: {
-                                type: "string",
-                                description: "The URL to request to."
-                            }
-                        },
-                        required: ["url"]
-                    },
-                    strict: true
-                }
-            }
-        ],
+        tools,
         stream: true
     };
 
@@ -234,12 +236,15 @@ export async function generateFakeAnswer(text, updateCurrent, abort) {
 }
 
 export async function getModels() {
-    let res = await fetch("http://localhost:5174/https://opencode.ai/zen/v1/models");
+    let res = await fetch("http://localhost:5174/https://models.dev/api.json");
     let json = await res.json();
-
-    let models = (json.data ?? [])
-        .map(e => e.id)
-        .filter(e => e.includes("free") || e == "big-pickle");
+    
+    let models = Object.entries(json.opencode?.models ?? {})
+        .filter(e => e[1].cost?.input === 0 && e[1].cost?.output === 0 && e[1].status != "deprecated")
+        .map(e => ({
+            id: e[0],
+            name: e[1].name
+        }));
     
     return models;
 }

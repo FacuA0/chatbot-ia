@@ -109,7 +109,7 @@ p {
   margin: revert;
 }
 
-.message-div * {
+.message-div > * {
   max-width: 100%;
   overflow-x: auto;
 }
