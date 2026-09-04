@@ -37,7 +37,7 @@ function TopMenu({models, selected, selModel, exportChat}) {
     }
 
     let modelList = models.map((e, i) => (
-        <MenuItem key={i} onClick={() => changeModel(i)}>{e}</MenuItem>
+        <MenuItem key={i} onClick={() => changeModel(i)}>{e.name}</MenuItem>
     ));
 
     return (
@@ -55,7 +55,7 @@ function TopMenu({models, selected, selModel, exportChat}) {
                 anchorEl={anchorMenu}
                 open={anchorMenu}
                 onClose={closeMenu}>
-                <MenuItem onClick={openModel}>Modelo: {models[selected]}</MenuItem>
+                <MenuItem onClick={openModel}>Modelo: {models[selected]?.name}</MenuItem>
                 <MenuItem onClick={exportChat2}>Exportar chat</MenuItem>
             </Menu>
             <Menu
