@@ -11,6 +11,7 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import EditIcon from '@mui/icons-material/Edit';
 import CopyIcon from '@mui/icons-material/ContentCopy';
 import SmallIconButton from "./SmallIconButton";
+import { getTool } from "../tools";
 
 const markdown = markdownit({
     highlight: function (str, lang) {
@@ -79,15 +80,10 @@ function ChatMessage({message, generating, actions, highlight}) {
         let args, content, loading = false;
         try {
             args = JSON.parse(tool.function.arguments);
-            if (tool.function.name == "calculate_numbers") {
-                content = `${args.number1} ${args.operator} ${args.number2}`;
+            let toolObj = getTool(tool.function.name);
+            if (toolObj) {
+                content = toolObj.getCallSummary(args);
             }
-            else if (tool.function.name == "web_request") {
-                content = args.url;
-            }/*
-            else if (tool.function.name == "serious_calculator") {
-                content = `${args.number1} ${args.operator} ${args.number2}`;
-            }*/
             else {
                 content = Object.entries(args).map(e => e.join(": ")).join(", ");
             }
