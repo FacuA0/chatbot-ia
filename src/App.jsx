@@ -2,15 +2,11 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import TopMenu from './components/TopMenu'
 import ChatList from './components/ChatList'
 import InputBar from './components/InputBar'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
 import './App.css'
-import { generateFakeAnswer, getModels, queryAI } from './utils'
+import { generateFakeAnswer, getDefaultConfig, queryAI } from './utils'
 
 function App() {
-    const [models, setModels] = useState([]);
-    const [modelSelected, setModelSelected] = useState(-1);
+    const [config, setConfig] = useState(getDefaultConfig);
     const [generation, setGeneration] = useState(null);
     const [curMessage, setCurMessage] = useState(null);
     const [error, setError] = useState(null);
@@ -19,8 +15,6 @@ function App() {
     const [edition, setEdition] = useState(null);
     const pendingRef = useRef(null);
     const rafRef = useRef(null);
-
-    //let newLists = [...messageList];
 
     function exportChat() {
         let a = document.createElement("a");
@@ -43,7 +37,7 @@ function App() {
     
         setMessageList(prevMsgs);
         generateAnswer(prevMsgs);
-    }, [messageList, modelSelected]);
+    }, [messageList, config]);
 
     const tryAgain = useCallback(() => {
         let prevMsgs = messageList.slice(0, messageList.findLastIndex(msg => msg.role == "user") + 1);
@@ -51,7 +45,7 @@ function App() {
 
         setMessageList(prevMsgs);
         generateAnswer(prevMsgs);
-    }, [messageList, modelSelected]);
+    }, [messageList, config]);
 
     function goToEdit() {
         setHighlight(edition.idx);
@@ -98,17 +92,7 @@ function App() {
         return newList;
     }
     
-    function sendFakeMessage(text) {
-        let msgList = addMessage(messageList, "user", text);
-        setMessageList(msgList);
-        
-        generateAnswer(msgList, {
-            fake: true, 
-            text
-        });
-    }
-
-    function sendMessage(text) {
+    function sendMessage(text, options = {}) {
         let msgList = [...messageList];
         if (edition != null) {
             msgList = msgList.slice(0, edition.idx);
@@ -121,7 +105,7 @@ function App() {
 
         //console.debug("Two ", JSON.stringify(msgList));
         
-        generateAnswer(msgList);
+        generateAnswer(msgList, options);
     }
 
     async function generateAnswer(msgList, options) {
@@ -138,12 +122,12 @@ function App() {
                 if (options?.fake)
                     ans = await generateFakeAnswer(options.text, updateCurrent, abort.signal);
                 else
-                    ans = await queryAI(msgList, models[modelSelected].id, updateCurrent, abort.signal);
+                    ans = await queryAI(msgList, config, updateCurrent, abort.signal);
                 
                 //console.debug("Four ", JSON.stringify(msgList));
                 cancelUpdates();
                 setCurMessage(null);
-                
+
                 let toolCallsObj = ans.toolCalls.length > 0 ? {tool_calls: ans.toolCalls} : {}
                 msgList = addMessage(msgList, "assistant", ans.message, ans.thinking, toolCallsObj);
                 setMessageList(msgList);
@@ -282,21 +266,6 @@ function App() {
         pendingRef.current = null;
     }
 
-    useEffect(() => {
-        getModels()
-        .then(newModels => {
-            setModels(newModels);
-    
-            let selModel = newModels.findIndex(e => e == "big-pickle");
-            if (selModel == -1) selModel = 0;
-            setModelSelected(selModel);
-        })
-        .catch(err => {
-            err.noRetry = true;
-            setError(err);
-        });
-    }, []);
-
     const actions = useMemo(() => (
         {tryAgain, regenerateSince, editMessage}
     ), [tryAgain, regenerateSince, editMessage]);
@@ -306,9 +275,9 @@ function App() {
             <header>
                 <h1>Chatbot IA</h1>
                 <TopMenu 
-                    models={models}
-                    selected={modelSelected}
-                    selModel={setModelSelected}
+                    config={config}
+                    setConfig={setConfig}
+                    setError={setError}
                     exportChat={exportChat}/>
             </header>
 
@@ -321,7 +290,6 @@ function App() {
                 highlight={highlight}/>
             <InputBar
                 sendMsg={sendMessage}
-                sendFake={sendFakeMessage}
                 resetChat={resetChat}
                 stopGen={stopGeneration}
                 stopEdit={stopEditing}
