@@ -1,81 +1,18 @@
+import { getAvailableTools } from "./tools";
+
 const API_OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible";
 const API_OPENAI = "@ai-sdk/openai";
 
 export async function queryAI(chat, config, updateCurrent, abort) {
-    let tools = [
-        {
-            type: "function",
-            function: {
-                name: "calculate_numbers",
-                description: "Do a basic calculation with any pair of two numbers and basic operators",
-                parameters: {
-                    type: "object",
-                    properties: {
-                        number1: {
-                            type: "number",
-                            description: "First operand to calculate."
-                        },
-                        operator: {
-                            type: "string",
-                            enum: ["+", "-", "*", "/"],
-                            description: "The operator used to calculate."
-                        },
-                        number2: {
-                            type: "number",
-                            description: "Second operand to calculate."
-                        }
-                    },
-                    required: ["number1", "operator", "number2"]
-                },
-                strict: true
-            }
-        },/*
-        {
-            type: "function",
-            function: {
-                name: "serious_calculator",
-                description: "Reaaally serious calculator...",
-                parameters: {
-                    type: "object",
-                    properties: {
-                        number1: {
-                            type: "number",
-                            description: "First serious operand to calculate."
-                        },
-                        operator: {
-                            type: "string",
-                            enum: ["+", "-", "*", "/"],
-                            description: "The very serious operator used to calculate."
-                        },
-                        number2: {
-                            type: "number",
-                            description: "Second ultra serious operand to calculate."
-                        }
-                    },
-                    required: ["number1", "operator", "number2"]
-                },
-                strict: true
-            }
-        },*/
-        {
-            type: "function",
-            function: {
-                name: "web_request",
-                description: "Make a GET request to a custom URL and get a status line and its response body",
-                parameters: {
-                    type: "object",
-                    properties: {
-                        url: {
-                            type: "string",
-                            description: "The URL to request to."
-                        }
-                    },
-                    required: ["url"]
-                },
-                strict: true
-            }
+    let tools = getAvailableTools().map(t => ({
+        type: "function",
+        function: {
+            name: t.name,
+            description: t.description,
+            parameters: t.parameters,
+            strict: true
         }
-    ];
+    }));
 
     let opts = {
         model: config.model.id ?? "big-pickle",
@@ -209,7 +146,7 @@ export async function generateFakeAnswer(text, updateCurrent, abort) {
     }
 
     let toolCalls = [];
-    if (Math.random() < 0.4) {
+    if (Math.random() < 0.9) {
         toolCalls = [{
             "index": 0,
             "id": "call_70fc0a0807564d4e9fcaf36a",
