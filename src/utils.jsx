@@ -1,4 +1,7 @@
-export async function queryAI(chat, model, updateCurrent, abort) {
+const API_OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible";
+const API_OPENAI = "@ai-sdk/openai";
+
+export async function queryAI(chat, config, updateCurrent, abort) {
     let tools = [
         {
             type: "function",
@@ -75,7 +78,7 @@ export async function queryAI(chat, model, updateCurrent, abort) {
     ];
 
     let opts = {
-        model: model ?? "big-pickle",
+        model: config.model.id ?? "big-pickle",
         messages: [
             {
                 role: "system",
@@ -243,11 +246,22 @@ export async function getModels() {
         .filter(e => e[1].cost?.input === 0 && e[1].cost?.output === 0 && e[1].status != "deprecated")
         .map(e => ({
             id: e[0],
-            name: e[1].name
+            name: e[1].name,
+            api: e[1].provider?.npm ?? API_OPENAI_COMPATIBLE
         }));
     
     return models;
 }
+
+export function getDefaultConfig() {
+    return {
+        model: {
+            id: "big-pickle",
+            name: "Big Pickle",
+            api: API_OPENAI_COMPATIBLE
+        }
+    };
+} 
 
 async function* getStreamedEvents(events) {
     let decoder = new TextDecoder();

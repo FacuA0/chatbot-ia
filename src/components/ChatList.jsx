@@ -27,8 +27,8 @@ function ChatList({msgList, currentMsg, error, generating, actions, highlight}) 
     //console.log("Updated list", currentMsg);
 
     const curMsg = currentMsg != null ? <>
-        <Divider key={currentMsg.idx - 1}/>
-        <ChatMessage key={currentMsg.idx} message={currentMsg}/>
+        <Divider/>
+        <ChatMessage message={currentMsg}/>
     </> : "";
 
     const errorMsg = error != null ? (

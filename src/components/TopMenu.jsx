@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Tooltip from "@mui/material/Tooltip";
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/MoreVert';
+import { getModels } from "../utils";
 
-function TopMenu({models, selected, selModel, exportChat}) {
+function TopMenu({config, setConfig, setError, exportChat}) {
     const [anchorMenu, setAnchorMenu] = useState(null);
     const [anchorModel, setAnchorModel] = useState(null);
+    const [models, setModels] = useState([]);
 
     function openMenu(evt) {
         setAnchorMenu(evt.currentTarget);
@@ -26,8 +28,8 @@ function TopMenu({models, selected, selModel, exportChat}) {
         closeMenu();
     }
 
-    function changeModel(i) {
-        selModel(i);
+    function changeModel(e) {
+        setConfig({...config, model: e});
         closeModel();
     }
 
@@ -37,8 +39,19 @@ function TopMenu({models, selected, selModel, exportChat}) {
     }
 
     let modelList = models.map((e, i) => (
-        <MenuItem key={i} onClick={() => changeModel(i)}>{e.name}</MenuItem>
+        <MenuItem key={i} onClick={() => changeModel(e)}>{e.name}</MenuItem>
     ));
+
+    useEffect(() => {
+        getModels()
+        .then(newModels => {
+            setModels(newModels);
+        })
+        .catch(err => {
+            err.noRetry = true;
+            setError(err);
+        });
+    }, []);
 
     return (
         <div id="menu">
@@ -55,7 +68,7 @@ function TopMenu({models, selected, selModel, exportChat}) {
                 anchorEl={anchorMenu}
                 open={anchorMenu}
                 onClose={closeMenu}>
-                <MenuItem onClick={openModel}>Modelo: {models[selected]?.name}</MenuItem>
+                <MenuItem onClick={openModel}>Modelo: {config.model.name}</MenuItem>
                 <MenuItem onClick={exportChat2}>Exportar chat</MenuItem>
             </Menu>
             <Menu

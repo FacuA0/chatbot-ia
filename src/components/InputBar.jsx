@@ -9,7 +9,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import StopIcon from '@mui/icons-material/Stop';
 import SmallIconButton from './SmallIconButton';
 
-function InputBar({sendMsg, sendFake, resetChat, stopGen, stopEdit, goToEdit, generating, edition}) {
+function InputBar({sendMsg, resetChat, stopGen, stopEdit, goToEdit, generating, edition}) {
     const [promptText, setPromptText] = useState("");
     const input = useRef();
 
@@ -21,12 +21,10 @@ function InputBar({sendMsg, sendFake, resetChat, stopGen, stopEdit, goToEdit, ge
     }
 
     function sendFakeMessage() {
-        sendFake(promptText);
-        setPromptText("");
-    }
-
-    function reset() {
-        resetChat()
+        sendMsg(promptText, {
+            fake: true,
+            text: promptText
+        });
         setPromptText("");
     }
 
