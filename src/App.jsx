@@ -140,7 +140,7 @@ function App() {
                     for (let call of ans.toolCalls) {
                         if (call.type != "function") continue;
 
-                        let toolMsg = await processToolCall(call);
+                        let toolMsg = await processToolCall(call, {abort});
 
                         msgList = addMessage(msgList, "tool", toolMsg, null, {
                             tool_call_id: call.id

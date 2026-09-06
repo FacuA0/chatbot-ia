@@ -14,13 +14,13 @@ export default class WebRequestTool extends Tool {
         required: ["url"]
     };
 
-    async execute(args) {
+    async execute(args, extra) {
         if (typeof args.url != "string")
             throw new Error("Invalid URL param: not a string or doesn't exist.");
-        let url = new URL(params.url);
+        let url = new URL(args.url);
 
         let webRes = await fetch("http://localhost:5174/" + url, {
-            signal: abort.signal
+            signal: extra.abort.signal
         });
         let body = await webRes.text();
 

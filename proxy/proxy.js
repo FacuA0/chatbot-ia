@@ -60,8 +60,16 @@ const server = http.createServer((req, res) => {
                 }
             }
 
+            // Actualizar Location de haber
+            if (proxyRes.headers.location) {
+                let meantURL = new URL(proxyRes.headers.location, targetUrl);
+                res.setHeader("Location", "http://localhost:5174/" + meantURL);
+            }
+
             // Mantener CORS
             res.setHeader("Access-Control-Allow-Origin", "*");
+            res.setHeader("Access-Control-Allow-Methods", "*");
+            res.setHeader("Access-Control-Allow-Headers", "*");
 
             // Reflejar body
             proxyRes.pipe(res);
