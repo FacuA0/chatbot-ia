@@ -11,7 +11,7 @@ export function getAvailableTools() {
     return tools;
 }
 
-export async function processToolCall(call) {
+export async function processToolCall(call, extra) {
     try {
         let args = JSON.parse(call.function.arguments);
         let tool = getTool(call.function.name);
@@ -19,7 +19,7 @@ export async function processToolCall(call) {
             throw new Error("Invalid tool name: " + call.function.name);
         }
 
-        return await tool.execute(args);
+        return await tool.execute(args, extra);
     }
     catch (err) {
         let errMsg = err.message;
