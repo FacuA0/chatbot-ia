@@ -25,6 +25,10 @@ export default class WebRequestTool extends Tool {
         if (typeof args.query != "string")
             throw new Error("Invalid query arg: not a string or doesn't exist.");
 
+        if (!config.ollamaApiKey) {
+            throw new Error("No API key present, ask the user to configure one in the tool.");
+        }
+
         let webRes = await fetch("http://localhost:5174/https://ollama.com/api/web_search", {
             method: "POST",
             headers: {
@@ -35,10 +39,25 @@ export default class WebRequestTool extends Tool {
             }),
             signal: extra.abort.signal
         });
-        let body = await webRes.text();
-        let statusText = !webRes.ok ? webRes.status + " " + webRes.statusText + "\n\n" : "";
+        let body = await webRes.text(), json;
 
-        return statusText + body;
+        try {
+            json = JSON.parse(body);
+        }
+        catch (err) {
+            throw new Error("Not a JSON response:\n\n" + body);
+        }
+
+        if (!json.results) {
+            let statusText = !webRes.ok ? webRes.status + " " + webRes.statusText + "\n\n" : "";
+            throw new Error(statusText + (json.error ?? body));
+        }
+
+        let results = json.results.map((r, i) => (
+            `**Result N°${i + 1}**\n**Title:** ${r.title}\n**URL:** ${r.url}\n**Snippet:** ${r.content}`
+        )).join("\n\n---\n\n");
+
+        return `${json.results.length} results found:\n\n${results}`;
     }
 
     getCallSummary(args) {

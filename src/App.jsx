@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import TopMenu from './components/TopMenu'
 import ChatList from './components/ChatList'
 import InputBar from './components/InputBar'
 import './App.css'
-import { generateFakeAnswer, getDefaultConfig, queryAI } from './utils'
+import { generateFakeAnswer, getDefaultConfig, generateSessionId, queryAI } from './utils'
 import { processToolCall } from "./tools"
 
 function App() {
@@ -71,6 +71,7 @@ function App() {
         setEdition(null);
         setCurMessage(null);
         setError(null);
+        setConfig({...config, sessionId: generateSessionId()});
     }
 
     function addMessage(msgList, role, message, thinking, extra = {}) {
