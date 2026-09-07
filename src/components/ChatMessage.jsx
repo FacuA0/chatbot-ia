@@ -77,27 +77,28 @@ function ChatMessage({message, generating, actions, highlight}) {
     ) : [];
 
     const tools = message.extra?.tool_calls ? message.extra.tool_calls.map(tool => {
-        let args, content, loading = false;
+        let args, argsStr, result;
+        result = tool.result ? tool.result : "";
         try {
             args = JSON.parse(tool.function.arguments);
             let toolObj = getTool(null, tool.function.name);
             if (toolObj) {
-                content = toolObj.getCallSummary(args);
+                argsStr = `(${toolObj.getCallSummary(args)})`;
             }
             else {
-                content = Object.entries(args).map(e => e.join(": ")).join(", ");
+                argsStr = `(${Object.entries(args).map(e => e.join(": ")).join(", ")})`;
             }
         }
         catch (err) {
             console.assert(err.message.startsWith("JSON.parse"), err);
-            loading = true;
-            content = "Cargando... (" + tool?.function?.arguments + ")";
+            let calling = !tool.result ? "Llamando" : "Cargando";
+            argsStr = calling + "... (" + tool?.function?.arguments + ")";
         }
 
         return {
             name: tool.function.name,
-            args: content,
-            loading
+            args: argsStr,
+            result
         }
     }) : [];
 
@@ -109,10 +110,10 @@ function ChatMessage({message, generating, actions, highlight}) {
                 expandIcon={<ExpandMoreIcon />}
                 aria-controls={`${message.idx}-${tId}-panel2-content`}
                 id={`${message.idx}-${tId}-panel2-header`}>
-                Herramienta {tool.name} {tool.loading ? "(cargando...)" : ""}
+                Herramienta {tool.name} {tool.args}
             </AccordionSummary>
             <AccordionDetails>
-                {tool.args}
+                {tool.result}
             </AccordionDetails>
         </Accordion>
     ));

@@ -41,7 +41,7 @@ function App() {
     }, [messageList, config]);
 
     const tryAgain = useCallback(() => {
-        let prevMsgs = messageList.slice(0, messageList.findLastIndex(msg => msg.role == "user") + 1);
+        let prevMsgs = messageList.slice(0, messageList.findLastIndex(msg => msg.role != "assistant") + 1);
         if (prevMsgs.length == 0) return;
 
         setMessageList(prevMsgs);

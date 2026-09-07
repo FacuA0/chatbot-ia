@@ -54,7 +54,7 @@ export default class WebRequestTool extends Tool {
         }
 
         let results = json.results.map((r, i) => (
-            `**Result N°${i + 1}**\n**Title:** ${r.title}\n**URL:** ${r.url}\n**Snippet:** ${r.content}`
+            `**Result N°${i + 1}**\n\n- **Title:** ${r.title}\n- **URL:** ${r.url}\n- **Snippet:** ${r.content}`
         )).join("\n\n---\n\n");
 
         return `${json.results.length} results found:\n\n${results}`;
