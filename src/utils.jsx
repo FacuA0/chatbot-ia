@@ -1,10 +1,10 @@
-import { getAvailableTools } from "./tools";
+import { getAvailableTools, getAllTools } from "./tools";
 
 const API_OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible";
 const API_OPENAI = "@ai-sdk/openai";
 
 export async function queryAI(chat, config, updateCurrent, abort) {
-    let tools = getAvailableTools().map(t => ({
+    let tools = getAvailableTools(config).map(t => ({
         type: "function",
         function: {
             name: t.name,
@@ -191,12 +191,24 @@ export async function getModels() {
 }
 
 export function getDefaultConfig() {
+    let tools = {};
+    for (let tool of getAllTools()) {
+        tools[tool.name] = {
+            enabled: true
+        };
+
+        for (let conf in (tool.config ?? {})) {
+            tools[tool.name][conf] = tool.config[conf].default;
+        };
+    }
+
     return {
         model: {
             id: "big-pickle",
             name: "Big Pickle",
             api: API_OPENAI_COMPATIBLE
-        }
+        },
+        tools
     };
 } 
 

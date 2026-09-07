@@ -14,7 +14,7 @@ export default class WebRequestTool extends Tool {
         required: ["url"]
     };
 
-    async execute(args, extra) {
+    async execute(args, _config, extra) {
         if (typeof args.url != "string")
             throw new Error("Invalid URL param: not a string or doesn't exist.");
         let url = new URL(args.url);

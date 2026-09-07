@@ -6,12 +6,13 @@ export class Tool {
         properties: {},
         required: []
     };
+    config = null;
 
-    async execute(_args) {
+    async execute(_args, _config) {
         return "Dummy tool";
     }
 
-    getCallSummary(args) {
+    getCallSummary(_args) {
         return "Dummy tool";
     }
 }

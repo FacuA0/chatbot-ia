@@ -80,7 +80,7 @@ function ChatMessage({message, generating, actions, highlight}) {
         let args, content, loading = false;
         try {
             args = JSON.parse(tool.function.arguments);
-            let toolObj = getTool(tool.function.name);
+            let toolObj = getTool(null, tool.function.name);
             if (toolObj) {
                 content = toolObj.getCallSummary(args);
             }
