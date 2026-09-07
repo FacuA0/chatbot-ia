@@ -23,7 +23,7 @@ export default class CalculateNumbersTool extends Tool {
         required: ["number1", "operator", "number2"]
     };
 
-    async execute(args) {
+    async execute(args, _config) {
         if (!Number.isFinite(args.number1) || !Number.isFinite(args.number2))
             throw new Error("Operand(s) aren't a number or aren't finite.");
         else if (!["+", "-", "*", "/"].includes(args.operator))
