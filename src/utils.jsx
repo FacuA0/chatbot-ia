@@ -4,6 +4,165 @@ const API_OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible";
 const API_OPENAI = "@ai-sdk/openai";
 
 export async function queryAI(chat, config, updateCurrent, abort) {
+    if (config.model.api == API_OPENAI_COMPATIBLE) {
+        return queryOpenAICompatEndpoint(chat, config, updateCurrent, abort);
+    }
+    else if (config.model.api == API_OPENAI) {
+        return queryOpenAIEndpoint(chat, config, updateCurrent, abort);
+    }
+}
+
+async function queryOpenAIEndpoint(chat, config, updateCurrent, abort) {
+    let tools = getAvailableTools(config).map(t => ({
+        type: "function",
+        name: t.name,
+        description: t.description,
+        parameters: t.parameters,
+        strict: false
+    }));
+
+    chat = chat.map(msg => {
+        if (msg.role == "assistant") {
+            return [{
+                role: msg.role,
+                content: msg.message,
+                ...msg.extra
+            }, ...(msg.extra?.tool_calls?.map?.(c => ({
+                type: "function_call",
+                name: c.function.name,
+                arguments: c.function.arguments,
+                call_id: c.id
+            })) ?? [])];
+        }
+        else if (msg.role == "tool") {
+            return {
+                type: "function_call_output",
+                output: msg.message,
+                call_id: msg.extra?.tool_call_id ?? ""
+            };
+        }
+        else return {
+            role: msg.role,
+            content: msg.message,
+            ...msg.extra
+        };
+    }).flat();
+
+    let opts = {
+        model: config.model.id ?? "big-pickle",
+        input: [
+            {
+                role: "system",
+                content: "You are a helpful assistant."
+            },
+            ...chat
+        ],
+        tools,
+        parallel_tool_calls: true,
+        stream: true
+    };
+
+    let res = await fetch("http://localhost:5174/https://opencode.ai/zen/v1/responses", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "x-opencode-session": config.sessionId
+        },
+        body: JSON.stringify(opts),
+        signal: abort
+    });
+
+    if (!res.ok) {
+        let body = await res.json();
+        throw new Error(body?.error?.message ?? body ?? res.statusText);
+    }
+
+    let events = res.body;
+    let acumThink = "", acumMsg = "", acumTool = [];
+    let thinkOrText = new Map();
+
+    for await (const event of getStreamedEvents(events)) {
+        let json = JSON.parse(event.content);
+        
+        if (json.error) {
+            throw new Error(json.error.message ?? json.error);
+        }
+        
+        if (event.type == "response.completed") {
+            console.log(4, "COMPLETED");
+            break;
+        }
+
+        let call;
+
+        switch (json.type) {
+            case "response.output_item.added":
+                if (json.item.type == "function_call") {
+                    acumTool.push({
+                        type: "function",
+                        id: json.item.call_id,
+                        item_id: json.item.id,
+                        function: {
+                            name: json.item.name,
+                            arguments: ""
+                        }
+                    });
+                }
+                break;
+            case "response.output_item.done":
+                if (json.item.type == "reasoning" && json.item.encrypted_content) {
+                    acumThink += "<encrypted reasoning>";
+                }
+                break;
+            case "response.content_part.added":
+                thinkOrText.set(json.item_id, json.part.type != "reasoning_text");
+                break;
+            case "response.content_part.done":
+                break;
+            case "response.output_text.delta":
+                if (thinkOrText.get(json.item_id)) {
+                    acumMsg += json.delta;
+                }
+                else {
+                    acumThink += json.delta;
+                }
+                break;
+            case "response.output_text.done":
+                break;
+            case "response.refusal.delta":
+                acumMsg += json.delta;
+                break;
+            case "response.refusal.done":
+                break;
+            case "response.function_call_arguments.delta":
+                call = acumTool.find(t => t.item_id == json.item_id);
+                if (call.function.arguments != null) {
+                    call.function.arguments += json.delta;
+                }
+                break;
+            case "response.function_call_arguments.done":
+                call = acumTool.find(t => t.item_id == json.item_id);
+                if (call.function.arguments != null) {
+                    call.function.arguments = json.arguments;
+                }
+                break;
+        }
+        
+        //console.debug(4, json.choices, acumThink, "-", acumMsg, "-", acumTool.slice());
+            
+        updateCurrent(acumMsg, acumThink, acumTool);
+
+        //console.debug(4, json.choices, acumThink, "-", acumMsg, "-", acumTool.slice());
+    }
+
+    return {
+        message: acumMsg,
+        thinking: acumThink,
+        toolCalls: acumTool
+    };
+}
+
+async function queryOpenAICompatEndpoint(chat, config, updateCurrent, abort) {
     let tools = getAvailableTools(config).map(t => ({
         type: "function",
         function: {
@@ -47,10 +206,16 @@ export async function queryAI(chat, config, updateCurrent, abort) {
     }
 
     let events = res.body;
-    let acumThink = "", acumMsg = "", acumTool = [];
+    let acumThink = "", acumMsg = "", acumTool = [], done = false;
 
-    for await (const content of getStreamedEvents(events)) {
-        let json = JSON.parse(content), choice;
+    for await (const event of getStreamedEvents(events)) {
+        if (event.content == "[DONE]") {
+            console.log(4, "[DONE]");
+            done = true;
+            break;
+        }
+
+        let json = JSON.parse(event.content), choice;
 
         if (json.error) {
             throw new Error(json.error.message ?? json.error);
@@ -98,6 +263,10 @@ export async function queryAI(chat, config, updateCurrent, abort) {
         }
 
         //console.debug(4, json.choices, acumThink, "-", acumMsg, "-", acumTool.slice());
+    }
+
+    if (!done) {
+        throw new Error("Unexpected end of stream without [DONE] mark.");
     }
 
     return {
@@ -231,24 +400,29 @@ async function* getStreamedEvents(events) {
             while (textPart.indexOf("\n\n") > -1) {
                 let partLines = textPart.substring(0, textPart.indexOf("\n\n")).split("\n");
                 //console.debug(2, partLines);
-                if (partLines[0].startsWith("data: ")) {
-                    let content = partLines[0].substring(6);
-                    for (let i = 1; i < partLines.length; i++) {
+                let i = 0, type, content;
+                if (partLines[0].startsWith("event: ")) {
+                    type = partLines[i].substring(7);
+                    i++;
+                }
+                if (partLines[i].startsWith("data: ")) {
+                    content = partLines[i].substring(6);
+                    for (i++; i < partLines.length; i++) {
                         if (!partLines[i].startsWith("data: "))
                             break;
                         content += "\n" + partLines[i].substring(6);
                     }
     
                     //console.debug(3, content);
-    
-                    // CONTENIDO
-    
-                    if (content == "[DONE]") {
-                        console.log(4, "[DONE]");
-                        return;
-                    }
-    
-                    yield content;
+                }
+
+                // CONTENIDO
+
+                if (content || type) {
+                    yield {
+                        type,
+                        content
+                    };
                 }
     
                 textPart = textPart.substring(textPart.indexOf("\n\n") + 2);
@@ -257,11 +431,8 @@ async function* getStreamedEvents(events) {
     }
     catch (err) {
         if (err.toString().includes("AbortError")) {
-            yield "[DONE]";
             return;
         }
         else throw err;
     }
-
-    throw new Error("Unexpected end of stream without [DONE] mark.");
 }

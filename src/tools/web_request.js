@@ -61,6 +61,7 @@ export default class WebRequestTool extends Tool {
     }
 
     getCallSummary(args) {
-        return args.url;
+        let raw = typeof args.raw == "boolean" ? ", raw=" + args.raw : "";
+        return args.url + raw;
     }
 }
