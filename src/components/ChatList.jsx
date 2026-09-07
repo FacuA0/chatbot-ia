@@ -11,6 +11,24 @@ function ChatList({msgList, currentMsg, error, generating, actions, highlight}) 
 
     let tryAgain = () => actions.tryAgain();
 
+    let newMsgList = [], aiMsg = null;
+    for (let msg of msgList) {
+        if (msg.role == "assistant") {
+            aiMsg = msg;
+            newMsgList.push(msg);
+        }
+        else if (msg.role == "tool" && aiMsg) {
+            let call = aiMsg.extra?.tool_calls?.find?.(c => c.id === msg.extra?.tool_call_id);
+            call.result = msg.message;
+        }
+        else {
+            aiMsg = null;
+            newMsgList.push(msg);
+        }
+    }
+
+    msgList = newMsgList;
+
     let chatList = msgList.map(msg => (
         <ChatMessage 
             key={msg.idx * 2}
