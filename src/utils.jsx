@@ -34,7 +34,8 @@ export async function queryAI(chat, config, updateCurrent, abort) {
     let res = await fetch("http://localhost:5174/https://opencode.ai/zen/v1/chat/completions", {
         method: "POST",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "x-opencode-session": config.sessionId
         },
         body: JSON.stringify(opts),
         signal: abort
@@ -208,9 +209,14 @@ export function getDefaultConfig() {
             name: "Big Pickle",
             api: API_OPENAI_COMPATIBLE
         },
-        tools
+        tools,
+        sessionId: generateSessionId()
     };
-} 
+}
+
+export function generateSessionId() {
+    return "ses_" + (Math.random() * 10e40).toString(36);
+}
 
 async function* getStreamedEvents(events) {
     let decoder = new TextDecoder();
