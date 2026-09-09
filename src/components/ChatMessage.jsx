@@ -83,10 +83,10 @@ function ChatMessage({message, generating, actions, highlight}) {
             args = JSON.parse(tool.function.arguments);
             let toolObj = getTool(null, tool.function.name);
             if (toolObj) {
-                argsStr = `(${toolObj.getCallSummary(args)})`;
+                argsStr = toolObj.getCallSummary(args);
             }
             else {
-                argsStr = `(${Object.entries(args).map(e => e.join(": ")).join(", ")})`;
+                argsStr = Object.entries(args).map(e => e.join(": ")).join(", ");
             }
         }
         catch (err) {
@@ -110,7 +110,7 @@ function ChatMessage({message, generating, actions, highlight}) {
                 expandIcon={<ExpandMoreIcon />}
                 aria-controls={`${message.idx}-${tId}-panel2-content`}
                 id={`${message.idx}-${tId}-panel2-header`}>
-                Herramienta {tool.name} {tool.args}
+                Herramienta {tool.name}: {tool.args}
             </AccordionSummary>
             <AccordionDetails>
                 {tool.result}

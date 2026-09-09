@@ -316,7 +316,7 @@ export async function generateFakeAnswer(text, updateCurrent, abort) {
     }
 
     let toolCalls = [];
-    if (Math.random() < 0.9) {
+    if (Math.random() < 0.4) {
         toolCalls = [{
             "index": 0,
             "id": "call_70fc0a0807564d4e9fcaf36a",

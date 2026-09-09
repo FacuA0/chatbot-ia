@@ -61,6 +61,6 @@ export default class WebRequestTool extends Tool {
     }
 
     getCallSummary(args) {
-        return args.query;
+        return `'${args.query}'`;
     }
 }

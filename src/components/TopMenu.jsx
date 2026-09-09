@@ -61,7 +61,10 @@ function TopMenu({config, setConfig, setError, exportChat}) {
         closeModel();
     }
 
-    function toggleTool(t) {
+    function toggleTool(e, t) {
+        if (!e.target.matches("li.MuiMenuItem-root"))
+            return;
+
         let copy = structuredClone(config);
         copy.tools[t.name].enabled = !copy.tools[t.name].enabled;
         setConfig(copy);
@@ -94,7 +97,7 @@ function TopMenu({config, setConfig, setError, exportChat}) {
         <MenuItem key={i} 
             role='menuitemcheckbox'
             selected={config.tools[t.name].enabled}
-            onClick={() => toggleTool(t)}>
+            onClick={(e) => toggleTool(e, t)}>
             {t.name}
             {t.config ? (
                 <SmallIconButton
@@ -112,6 +115,7 @@ function TopMenu({config, setConfig, setError, exportChat}) {
                 key={`field-config-${conf[0]}`}
                 id={`field-config-${conf[0]}`}
                 variant='outlined'
+                fullWidth
                 label={conf[1].label}
                 onChange={e => changeToolConfig(conf[0], e.target.value)}
                 value={config.tools[configDialog.name][conf[0]]}/>
