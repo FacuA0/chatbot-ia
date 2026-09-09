@@ -28,6 +28,17 @@ function InputBar({sendMsg, resetChat, stopGen, stopEdit, goToEdit, generating, 
         setPromptText("");
     }
 
+    function handleKeyDown(evt) {
+        if (!evt.shiftKey && evt.key == "Enter") {
+            if (!evt.ctrlKey) {
+                sendMessage();
+            }
+            else {
+                sendFakeMessage();
+            }
+        }
+    }
+
     const iconBtn = generating ? (
         <Tooltip title="Detener">
             <IconButton onClick={stopGen}>
@@ -70,6 +81,7 @@ function InputBar({sendMsg, resetChat, stopGen, stopEdit, goToEdit, generating, 
                     value={promptText}
                     inputRef={input}
                     onChange={e => setPromptText(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     disabled={generating}
                     multiline/>
                 <Button 

@@ -1,3 +1,25 @@
+# Chatbot IA
+
+Simple chatbot de IA que utiliza modelos gratuitos de OpenCode.
+
+Incluye:
+
+- Conversación multi-turno
+- Streaming de respuestas
+- Razonamiento de modelos
+- Herramientas (calculadora, consulta web, búsqueda).
+- Exportar chat en JSON.
+
+No incluye:
+
+- MCP (todavía)
+- Múltiples chats
+- Otros proveedores
+
+**Importante:** Iniciar el servidor proxy CORS en `proxy/proxy.js` antes de iniciar la app (el server dev de Vite ya lo inicia automáticamente).
+
+Texto viejo del README:
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
