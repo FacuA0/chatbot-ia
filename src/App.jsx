@@ -160,7 +160,7 @@ function App() {
         catch (err) {
             cancelUpdates();
             if (!err.toString().includes("AbortError")) {
-                setError(err.message);
+                setError(err);
                 console.error(err);
             }
         }

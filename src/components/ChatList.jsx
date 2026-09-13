@@ -53,7 +53,7 @@ function ChatList({msgList, currentMsg, error, generating, actions, highlight}) 
         <div id="msg-error">
             There was an error making the request.&#x20;
             {(!error.noRetry ? (<ActionLink action={tryAgain}>Try again.</ActionLink>) : (<></>))}
-            &#x20;Error: {error}
+            &#x20;{error + ""}
         </div>
     ) : "";
 
