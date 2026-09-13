@@ -62,7 +62,7 @@ async function queryOpenAIEndpoint(chat, config, updateCurrent, abort) {
         stream: true
     };
 
-    let res = await fetch("http://localhost:5174/https://opencode.ai/zen/v1/responses", {
+    let res = await fetch(config.proxy + "https://opencode.ai/zen/v1/responses", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -190,7 +190,7 @@ async function queryOpenAICompatEndpoint(chat, config, updateCurrent, abort) {
         stream: true
     };
 
-    let res = await fetch("http://localhost:5174/https://opencode.ai/zen/v1/chat/completions", {
+    let res = await fetch(config.proxy + "https://opencode.ai/zen/v1/chat/completions", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -345,8 +345,8 @@ export async function generateFakeAnswer(text, updateCurrent, abort) {
     }
 }
 
-export async function getModels() {
-    let res = await fetch("http://localhost:5174/https://models.dev/api.json");
+export async function getModels(config) {
+    let res = await fetch(config.proxy + "https://models.dev/api.json");
     let json = await res.json();
     
     let models = Object.entries(json.opencode?.models ?? {})
@@ -379,6 +379,7 @@ export function getDefaultConfig() {
             api: API_OPENAI_COMPATIBLE
         },
         tools,
+        proxy: "http://localhost:517/",
         sessionId: generateSessionId()
     };
 }

@@ -31,6 +31,7 @@ function TopMenu({config, setConfig, setError, exportChat}) {
     const [anchorTool, setAnchorTool] = useState(null);
     const [models, setModels] = useState([]);
     const [configDialog, setConfigDialog] = useState(null);
+    const [proxyDialog, setProxyDialog] = useState(false);
 
     function openMenu(evt) {
         setAnchorMenu(evt.currentTarget);
@@ -74,14 +75,28 @@ function TopMenu({config, setConfig, setError, exportChat}) {
         setConfigDialog(t);
     }
 
+    function openProxyConfig() {
+        setProxyDialog(true);
+    }
+
     function changeToolConfig(configKey, newValue) {
         let copy = structuredClone(config);
         copy.tools[configDialog.name][configKey] = newValue;
         setConfig(copy);
     }
 
+    function changeProxyConfig(newURL) {
+        let copy = structuredClone(config);
+        copy.proxy = newURL;
+        setConfig(copy);
+    }
+
     function closeToolConfig() {
         setConfigDialog(null);
+    }
+
+    function closeProxyConfig() {
+        setProxyDialog(false);
     }
 
     function exportChat2(i) {
@@ -127,7 +142,10 @@ function TopMenu({config, setConfig, setError, exportChat}) {
     )) : [];
 
     useEffect(() => {
-        getModels()
+        if (models.length > 0)
+            return;
+
+        getModels(config)
         .then(newModels => {
             setModels(newModels);
         })
@@ -135,25 +153,24 @@ function TopMenu({config, setConfig, setError, exportChat}) {
             err.noRetry = true;
             setError(err);
         });
-    }, []);
+    }, [config]);
 
     return (
         <div id="menu">
             <Tooltip title="Opciones">
-                <span>
-                    <IconButton 
-                        onClick={openMenu}
-                        disabled={models.length == 0}>
-                        <MenuIcon/>
-                    </IconButton>
-                </span>
+                <IconButton 
+                    onClick={openMenu}>
+                    <MenuIcon/>
+                </IconButton>
             </Tooltip>
             <Menu
                 anchorEl={anchorMenu}
                 open={anchorMenu}
                 onClose={closeMenu}>
-                <MenuItem onClick={openModel}>Modelo: {config.model.name}</MenuItem>
+                <MenuItem disabled={models.length == 0}
+                    onClick={openModel}>Modelo: {config.model.name}</MenuItem>
                 <MenuItem onClick={openTool}>Herramientas</MenuItem>
+                <MenuItem onClick={openProxyConfig}>Proxy CORS</MenuItem>
                 <MenuItem onClick={exportChat2}>Exportar chat</MenuItem>
             </Menu>
             <Menu
@@ -177,6 +194,26 @@ function TopMenu({config, setConfig, setError, exportChat}) {
                         Opciones de {configDialog?.name ?? "<cerrado>"}
                     </h4>
                     {configOptions}
+                </Box>
+            </Modal>
+            <Modal
+                open={proxyDialog}
+                onClose={closeProxyConfig}
+                aria-labelledby="proxy-config-title">
+                <Box sx={toolConfigStyle}>
+                    <h4 id="proxy-config-title" style={{marginTop: "4px"}}>
+                        Proxy CORS
+                    </h4>
+                    <p id="proxy-config-title" style={{marginBottom: "20px"}}>
+                        Configurar proxy para que la página interactúe con sitios externos.
+                    </p>
+                    <TextField
+                        id="field-url-proxy"
+                        variant="outlined"
+                        fullWidth
+                        label="URL de proxy"
+                        onChange={e => changeProxyConfig(e.target.value)}
+                        value={config.proxy}/>
                 </Box>
             </Modal>
         </div>
