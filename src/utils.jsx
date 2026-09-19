@@ -3,6 +3,8 @@ import { getAvailableTools, getAllTools } from "./tools";
 const API_OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible";
 const API_OPENAI = "@ai-sdk/openai";
 
+const DEFAULT_ENDPOINT = "https://api.kilo.ai/api/gateway";
+
 export async function queryAI(chat, config, updateCurrent, abort) {
     if (config.model.api == API_OPENAI_COMPATIBLE) {
         return queryOpenAICompatEndpoint(chat, config, updateCurrent, abort);
@@ -62,7 +64,7 @@ async function queryOpenAIEndpoint(chat, config, updateCurrent, abort) {
         stream: true
     };
 
-    let res = await fetch(config.proxy + "https://opencode.ai/zen/v1/responses", {
+    let res = await fetch(config.proxy + config.model.endpoint + "/responses", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -190,7 +192,7 @@ async function queryOpenAICompatEndpoint(chat, config, updateCurrent, abort) {
         stream: true
     };
 
-    let res = await fetch(config.proxy + "https://opencode.ai/zen/v1/chat/completions", {
+    let res = await fetch(config.proxy + config.model.endpoint + "/chat/completions", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -349,12 +351,13 @@ export async function getModels(config) {
     let res = await fetch(config.proxy + "https://models.dev/api.json");
     let json = await res.json();
     
-    let models = Object.entries(json.opencode?.models ?? {})
-        .filter(e => e[1].cost?.input === 0 && e[1].cost?.output === 0 && e[1].status != "deprecated")
+    let models = Object.entries(json.kilo?.models ?? {})
+        .filter(e => e[1].cost?.input === 0 && e[1].cost?.output === 0)
         .map(e => ({
             id: e[0],
             name: e[1].name,
-            api: e[1].provider?.npm ?? API_OPENAI_COMPATIBLE
+            api: e[1].provider?.npm ?? API_OPENAI_COMPATIBLE,
+            endpoint: json.kilo?.api ?? DEFAULT_ENDPOINT
         }));
     
     return models;
@@ -374,12 +377,13 @@ export function getDefaultConfig() {
 
     return {
         model: {
-            id: "big-pickle",
-            name: "Big Pickle",
-            api: API_OPENAI_COMPATIBLE
+            id: "kilo-auto/free",
+            name: "Auto Free",
+            api: API_OPENAI_COMPATIBLE,
+            endpoint: DEFAULT_ENDPOINT
         },
         tools,
-        proxy: "http://localhost:517/",
+        proxy: "http://localhost:5174/",
         sessionId: generateSessionId()
     };
 }

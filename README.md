@@ -1,6 +1,6 @@
 # Chatbot IA
 
-Simple chatbot de IA que utiliza modelos gratuitos de OpenCode.
+Simple chatbot de IA que utiliza modelos gratuitos de Kilo AI Gateway.
 
 Incluye:
 
