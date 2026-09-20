@@ -203,8 +203,9 @@ async function queryOpenAICompatEndpoint(chat, config, updateCurrent, abort) {
     });
 
     if (!res.ok) {
-        let body = await res.json();
-        throw new Error(body?.error?.message ?? body ?? res.statusText);
+        let body = await res.text();
+        console.error(`${res.status} ${res.statusText}`, body);
+        throw new Error(errorMessage(body));
     }
 
     let events = res.body;
@@ -220,7 +221,7 @@ async function queryOpenAICompatEndpoint(chat, config, updateCurrent, abort) {
         let json = JSON.parse(event.content), choice;
 
         if (json.error) {
-            throw new Error(json.error.message ?? json.error);
+            throw new Error(errorMessage(event.content));
         }
 
         if ((choice = json.choices[0]) && choice.finish_reason == null) {
@@ -439,5 +440,39 @@ async function* getStreamedEvents(events) {
             return;
         }
         else throw err;
+    }
+}
+
+function errorMessage(body) {
+    try {
+        let json = JSON.parse(body);
+
+        if (typeof json.error == "object") {
+            let parts = [], err = json.error;
+            if (err.message)
+                parts.push(err.message);
+            if (err.metadata?.raw)
+                parts.push(err.metadata.raw);
+
+            if (parts.length > 0)
+                return parts.join(": ");
+
+            return JSON.stringify(err);
+        }
+
+        let parts = [];
+        if (typeof json.error == "string")
+            parts.push(json.error);
+        if (typeof json.message == "string")
+            parts.push(json.message);
+
+        if (parts.length > 0)
+            return parts.join(": ");
+
+        return JSON.stringify(json);
+    }
+    catch (error) {
+        console.error(body);
+        return body.slice(0, 256);
     }
 }
