@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import Tooltip from "@mui/material/Tooltip";
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
 import IconButton from '@mui/material/IconButton';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import SettingsIcon from '@mui/icons-material/Settings';
+import CheckIcon from '@mui/icons-material/Check';
 import MenuIcon from '@mui/icons-material/MoreVert';
 import { getModels } from "../utils";
 import { getAllTools } from "../tools";
@@ -105,7 +107,9 @@ function TopMenu({config, setConfig, setError, exportChat}) {
     }
 
     let modelList = models.map((m, i) => (
-        <MenuItem key={i} onClick={() => changeModel(m)}>{m.name}</MenuItem>
+        <MenuItem key={i} 
+            selected={config.model.id == m.id}
+            onClick={() => changeModel(m)}>{m.name}</MenuItem>
     ));
 
     let toolList = getAllTools().map((t, i) => (
@@ -113,6 +117,9 @@ function TopMenu({config, setConfig, setError, exportChat}) {
             role='menuitemcheckbox'
             selected={config.tools[t.name].enabled}
             onClick={(e) => toggleTool(e, t)}>
+            <ListItemIcon>
+                {config.tools[t.name].enabled ? <CheckIcon fontSize="small" /> : null}
+            </ListItemIcon>
             {t.name}
             {t.config ? (
                 <SmallIconButton
@@ -120,7 +127,7 @@ function TopMenu({config, setConfig, setError, exportChat}) {
                     title="Opciones"
                     icon={SettingsIcon}
                     onClick={() => openToolConfig(t)}/>
-            ) : (<></>)}
+            ) : null}
         </MenuItem>
     ));
 
