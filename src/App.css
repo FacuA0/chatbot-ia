@@ -35,7 +35,7 @@ header > h1 {
 main {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
 }
 
 /*
@@ -139,6 +139,7 @@ p {
 .msg-div .MuiAccordionDetails-root {
   font-size: 0.9em;
   padding: 4px 16px 8px;
+  word-break: break-word;
 }
 
 /*

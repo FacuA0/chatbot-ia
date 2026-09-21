@@ -15,16 +15,18 @@ import { getAllTools } from "../tools";
 import SmallIconButton from './SmallIconButton';
 
 const toolConfigStyle = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 400,
-  bgcolor: 'background.paper',
-  border: '0px',
-  borderRadius: "12px",
-  boxShadow: 24,
-  p: 3,
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 420,
+    maxWidth: 'calc(100% - 24px)',
+    boxSizing: 'border-box',
+    bgcolor: 'background.paper',
+    border: '0px',
+    borderRadius: "12px",
+    boxShadow: 24,
+    p: 3,
 };
 
 function TopMenu({config, setConfig, setError, exportChat}) {
