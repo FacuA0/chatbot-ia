@@ -20,6 +20,7 @@ export default class WebRequestTool extends Tool {
             default: ""
         }
     };
+    defaultEnabled = false;
 
     async execute(args, config, extra) {
         if (typeof args.query != "string")

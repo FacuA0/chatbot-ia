@@ -1,7 +1,9 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import TopMenu from './components/TopMenu'
 import ChatList from './components/ChatList'
 import InputBar from './components/InputBar'
+import AlertDialog from './components/AlertDialog'
+import { Button } from '@mui/material'
 import './App.css'
 import { generateFakeAnswer, getDefaultConfig, generateSessionId, queryAI } from './utils'
 import { processToolCall } from "./tools"
@@ -14,6 +16,7 @@ function App() {
     const [messageList, setMessageList] = useState([]);
     const [highlight, setHighlight] = useState(null);
     const [edition, setEdition] = useState(null);
+    const [proxyAlert, setProxyAlert] = useState(false);
     const pendingRef = useRef(null);
     const rafRef = useRef(null);
 
@@ -204,6 +207,12 @@ function App() {
         {tryAgain, regenerateSince, editMessage}
     ), [tryAgain, regenerateSince, editMessage]);
 
+    useEffect(() => {
+        if (location.hostname != "localhost") {
+            setProxyAlert(true);
+        }
+    }, []);
+
     return (
         <main>
             <header>
@@ -230,6 +239,20 @@ function App() {
                 goToEdit={goToEdit}
                 generating={generation != null}
                 edition={edition}/>
+            <AlertDialog 
+                open={proxyAlert}
+                setOpen={setProxyAlert}
+                title="Es necesario habilitar el proxy público"
+                content={<>
+                    Este sitio utiliza un servidor intermediario (proxy) para poder usar servicios de IA y poder acceder a la mayoría de Internet.
+                    Dado que es un servicio abierto y, con el fin de reducir abusos, este proxy requiere habilitar el acceso manualmente para este dispositivo.<br/><br/>
+                    Para hacerlo, acceda al sitio y haga click en el botón "Request temporary access to the demo server"<br/><br/></>}
+                okText="Hecho">
+                <Button variant="contained" 
+                    onClick={() => open("https://cors-anywhere.herokuapp.com/corsdemo")}>
+                    Acceder al sitio
+                </Button>
+            </AlertDialog>
         </main>
     );
 }

@@ -7,6 +7,7 @@ export class Tool {
         required: []
     };
     config = null;
+    defaultEnabled = true;
 
     async execute(_args, _config) {
         return "Dummy tool";
