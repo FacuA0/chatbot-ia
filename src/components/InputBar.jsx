@@ -88,10 +88,10 @@ function InputBar({sendMsg, resetChat, stopGen, stopEdit, goToEdit, generating, 
                     variant='contained' 
                     onClick={sendMessage}
                     loading={generating}>Enviar</Button>
-                <Button 
+                {location.hostname == "localhost" ? <Button 
                     variant='outlined' 
                     onClick={sendFakeMessage}
-                    loading={generating}>Test</Button>
+                    loading={generating}>Test</Button> : null}
                 {iconBtn}
             </div>
         </div>

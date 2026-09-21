@@ -4,6 +4,7 @@ const API_OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible";
 const API_OPENAI = "@ai-sdk/openai";
 
 const DEFAULT_ENDPOINT = "https://api.kilo.ai/api/gateway";
+const DEFAULT_PUBLIC_PROXY = "https://cors-anywhere.herokuapp.com/";
 
 export async function queryAI(chat, config, updateCurrent, abort) {
     if (config.model.api == API_OPENAI_COMPATIBLE) {
@@ -368,7 +369,7 @@ export function getDefaultConfig() {
     let tools = {};
     for (let tool of getAllTools()) {
         tools[tool.name] = {
-            enabled: true
+            enabled: tool.defaultEnabled
         };
 
         for (let conf in (tool.config ?? {})) {
@@ -384,7 +385,7 @@ export function getDefaultConfig() {
             endpoint: DEFAULT_ENDPOINT
         },
         tools,
-        proxy: "http://localhost:5174/",
+        proxy: location.hostname == "localhost" ? "http://localhost:5174/" : DEFAULT_PUBLIC_PROXY,
         sessionId: generateSessionId()
     };
 }
