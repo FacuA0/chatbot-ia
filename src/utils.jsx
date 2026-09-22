@@ -160,7 +160,8 @@ async function queryOpenAIEndpoint(chat, config, updateCurrent, abort) {
     return {
         message: acumMsg,
         thinking: acumThink,
-        toolCalls: acumTool
+        toolCalls: acumTool,
+        details: {}
     };
 }
 
@@ -208,7 +209,7 @@ async function queryOpenAICompatEndpoint(chat, config, updateCurrent, abort) {
     }
 
     let events = res.body;
-    let acumThink = "", acumMsg = "", acumTool = [], done = false;
+    let acumThink = "", acumMsg = "", acumTool = [], details = {}, done = false;
 
     for await (const event of getStreamedEvents(events)) {
         if (event.content == "[DONE]") {
@@ -264,6 +265,16 @@ async function queryOpenAICompatEndpoint(chat, config, updateCurrent, abort) {
             updateCurrent(acumMsg, acumThink, acumTool);
         }
 
+        if (json.model && !details.model) {
+            details.model = json.model;
+        }
+
+        if (json.usage) {
+            details.totalTokens = json.usage.total_tokens;
+            details.promptTokens = json.usage.prompt_tokens;
+            details.answerTokens = json.usage.completion_tokens;
+        }
+
         //console.debug(4, json.choices, acumThink, "-", acumMsg, "-", acumTool.slice());
     }
 
@@ -274,7 +285,8 @@ async function queryOpenAICompatEndpoint(chat, config, updateCurrent, abort) {
     return {
         message: acumMsg,
         thinking: acumThink,
-        toolCalls: acumTool
+        toolCalls: acumTool,
+        details
     };
 }
 
@@ -333,7 +345,8 @@ export async function generateFakeAnswer(text, updateCurrent, abort) {
     return {
         message: res,
         thinking: finalThink,
-        toolCalls
+        toolCalls,
+        details: {}
     };
     
     function wait(ms, abort) {

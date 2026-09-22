@@ -51,8 +51,8 @@ function ChatList({msgList, currentMsg, error, generating, actions, highlight}) 
 
     const errorMsg = error != null ? (
         <div id="msg-error">
-            There was an error making the request.&#x20;
-            {(!error.noRetry ? (<ActionLink action={tryAgain}>Try again.</ActionLink>) : (<></>))}
+            Hubo un error realizando la solicitud.&#x20;
+            {(!error.noRetry ? (<ActionLink action={tryAgain}>Vuelva a intentarlo.</ActionLink>) : (<></>))}
             &#x20;{error + ""}
         </div>
     ) : "";

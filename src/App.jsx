@@ -78,7 +78,7 @@ function App() {
         setError(null);
     }
 
-    function addMessage(msgList, role, message, thinking, extra = {}) {
+    function addMessage(msgList, role, message, thinking, details, extra = {}) {
         console.debug("Adding msg", message, "- think", thinking);
 
         let reasoning = thinking != null ? {reasoning_content: thinking} : {};
@@ -87,6 +87,7 @@ function App() {
             role,
             message,
             thinking,
+            details,
             extra: {
                 ...extra,
                 ...reasoning
@@ -136,7 +137,7 @@ function App() {
                 setBannerProxy(false);
 
                 let toolCallsObj = ans.toolCalls.length > 0 ? {tool_calls: ans.toolCalls} : {}
-                msgList = addMessage(msgList, "assistant", ans.message, ans.thinking, toolCallsObj);
+                msgList = addMessage(msgList, "assistant", ans.message, ans.thinking, ans.details, toolCallsObj);
                 setMessageList(msgList);
 
                 //console.debug("Five ", JSON.stringify(msgList));
@@ -148,7 +149,7 @@ function App() {
 
                         let toolMsg = await processToolCall(config, call, {abort});
 
-                        msgList = addMessage(msgList, "tool", toolMsg, null, {
+                        msgList = addMessage(msgList, "tool", toolMsg, null, null, {
                             tool_call_id: call.id
                         });
                         setMessageList(msgList);
