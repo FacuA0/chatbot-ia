@@ -7,6 +7,7 @@ import IconButton from '@mui/material/IconButton';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CheckIcon from '@mui/icons-material/Check';
 import MenuIcon from '@mui/icons-material/MoreVert';
@@ -223,6 +224,15 @@ function TopMenu({config, setConfig, setError, exportChat}) {
                         label="URL de proxy"
                         onChange={e => changeProxyConfig(e.target.value)}
                         value={config.proxy}/>
+                    
+                    <Button variant="text" 
+                        onClick={() => changeProxyConfig("https://cors-anywhere.herokuapp.com/")}>
+                        Usar proxy público
+                    </Button>
+                    {location.hostname == "localhost" ? <Button variant="text" 
+                        onClick={() => changeProxyConfig("http://localhost:5174/")}>
+                        Usar localhost
+                    </Button> : null}
                 </Box>
             </Modal>
         </div>
