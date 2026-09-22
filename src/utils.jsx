@@ -68,8 +68,7 @@ async function queryOpenAIEndpoint(chat, config, updateCurrent, abort) {
     let res = await fetch(config.proxy + config.model.endpoint + "/responses", {
         method: "POST",
         headers: {
-            "Content-Type": "application/json",
-            "x-opencode-session": config.sessionId
+            "Content-Type": "application/json"
         },
         body: JSON.stringify(opts),
         signal: abort
@@ -196,8 +195,7 @@ async function queryOpenAICompatEndpoint(chat, config, updateCurrent, abort) {
     let res = await fetch(config.proxy + config.model.endpoint + "/chat/completions", {
         method: "POST",
         headers: {
-            "Content-Type": "application/json",
-            "x-opencode-session": config.sessionId
+            "Content-Type": "application/json"
         },
         body: JSON.stringify(opts),
         signal: abort
@@ -385,13 +383,12 @@ export function getDefaultConfig() {
             endpoint: DEFAULT_ENDPOINT
         },
         tools,
-        proxy: location.hostname == "localhost" ? "http://localhost:5174/" : DEFAULT_PUBLIC_PROXY,
-        sessionId: generateSessionId()
+        proxy: location.hostname == "localhost" ? "http://localhost:5174/" : DEFAULT_PUBLIC_PROXY
     };
 }
 
-export function generateSessionId() {
-    return "ses_" + (Math.random() * 10e40).toString(36);
+export async function checkPublicProxy() {
+    return (await fetch(DEFAULT_PUBLIC_PROXY)).ok;
 }
 
 async function* getStreamedEvents(events) {

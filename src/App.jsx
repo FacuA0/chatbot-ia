@@ -3,9 +3,9 @@ import TopMenu from './components/TopMenu'
 import ChatList from './components/ChatList'
 import InputBar from './components/InputBar'
 import AlertDialog from './components/AlertDialog'
-import { Button } from '@mui/material'
+import { Alert, Button } from '@mui/material'
 import './App.css'
-import { generateFakeAnswer, getDefaultConfig, generateSessionId, queryAI } from './utils'
+import { generateFakeAnswer, getDefaultConfig, queryAI, checkPublicProxy } from './utils'
 import { processToolCall } from "./tools"
 
 function App() {
@@ -17,6 +17,8 @@ function App() {
     const [highlight, setHighlight] = useState(null);
     const [edition, setEdition] = useState(null);
     const [proxyAlert, setProxyAlert] = useState(false);
+    const [bannerProxy, setBannerProxy] = useState(false);
+    const proxyCheckRef = useRef(null);
     const pendingRef = useRef(null);
     const rafRef = useRef(null);
 
@@ -74,7 +76,6 @@ function App() {
         setEdition(null);
         setCurMessage(null);
         setError(null);
-        setConfig({...config, sessionId: generateSessionId()});
     }
 
     function addMessage(msgList, role, message, thinking, extra = {}) {
@@ -132,6 +133,7 @@ function App() {
                 //console.debug("Four ", JSON.stringify(msgList));
                 cancelUpdates();
                 setCurMessage(null);
+                setBannerProxy(false);
 
                 let toolCallsObj = ans.toolCalls.length > 0 ? {tool_calls: ans.toolCalls} : {}
                 msgList = addMessage(msgList, "assistant", ans.message, ans.thinking, toolCallsObj);
@@ -165,6 +167,9 @@ function App() {
             if (!err.toString().includes("AbortError")) {
                 setError(err);
                 console.error(err);
+                if (err.toString().includes("/corsdemo")) {
+                    setBannerProxy(true);
+                }
             }
         }
 
@@ -203,13 +208,48 @@ function App() {
         pendingRef.current = null;
     }
 
+    async function recheckProxy() {
+        if (await checkPublicProxy()) {
+            setBannerProxy(false);
+            clearInterval(proxyCheckRef.current[0]);
+            clearTimeout(proxyCheckMaxRef.current[1]);
+            proxyCheckRef.current = null;
+        }
+    }
+
+    function goToEnableProxy() {
+        open("https://cors-anywhere.herokuapp.com/corsdemo");
+
+        setTimeout(() => {
+            proxyCheckRef.current = [setInterval(recheckProxy, 20000), setTimeout(() => {
+                clearInterval(proxyCheckRef.current[0]);
+                proxyCheckRef.current = null;
+            }, 10 * 60 * 1000)];
+        }, 10000);
+    }
+    
+    const bannerDiv = bannerProxy ? <Alert 
+        severity='info' 
+        action={
+            <Button color="inherit" size="small" onClick={goToEnableProxy}>
+                Ir al sitio
+            </Button>
+        }>
+        El proxy público está deshabilitado. Vuelva a habilitar el acceso en su sitio.
+    </Alert> : null;
+
     const actions = useMemo(() => (
         {tryAgain, regenerateSince, editMessage}
     ), [tryAgain, regenerateSince, editMessage]);
 
     useEffect(() => {
         if (location.hostname != "localhost") {
-            setProxyAlert(true);
+            checkPublicProxy().then(active => {
+                if (!active) {
+                    setBannerProxy(true);
+                    setProxyAlert(true);
+                }
+            });
         }
     }, []);
 
@@ -223,6 +263,7 @@ function App() {
                     setError={setError}
                     exportChat={exportChat}/>
             </header>
+            {bannerDiv}
 
             <ChatList
                 msgList={messageList}
@@ -249,7 +290,7 @@ function App() {
                     Para hacerlo, acceda al sitio y haga click en el botón "Request temporary access to the demo server"<br/><br/></>}
                 okText="Hecho">
                 <Button variant="contained" 
-                    onClick={() => open("https://cors-anywhere.herokuapp.com/corsdemo")}>
+                    onClick={goToEnableProxy}>
                     Acceder al sitio
                 </Button>
             </AlertDialog>
