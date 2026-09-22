@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, memo } from "react";
+import { useEffect, useRef, useMemo, memo, useState } from "react";
 import markdownit from "markdown-it";
 import texmath from "markdown-it-texmath";
 import katex from "katex";
@@ -12,6 +12,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import CopyIcon from '@mui/icons-material/ContentCopy';
 import SmallIconButton from "./SmallIconButton";
 import { getTool } from "../tools";
+import ActionLink from "./ActionLink";
+import ModalBox from "./ModalBox";
 
 const markdown = markdownit({
     highlight: function (str, lang) {
@@ -33,6 +35,7 @@ const markdown = markdownit({
 });
 
 function ChatMessage({message, generating, actions, highlight}) {
+    let [detailsOpen, setDetailsOpen] = useState(false);
     let messageRef = useRef();
     let thinkingRef = useRef();
     let msgDivRef = useRef();
@@ -41,9 +44,8 @@ function ChatMessage({message, generating, actions, highlight}) {
 
     const isUser = message.role == "user";
     const title = ({
-        user: "User",
-        assistant: "AI",
-        tool: "Tool"
+        user: "Usuario",
+        assistant: "IA"
     })[message.role];
 
     async function copyMessage() {
@@ -118,6 +120,7 @@ function ChatMessage({message, generating, actions, highlight}) {
         </Accordion>
     ));
     
+    // The streamed message doesn't receive an actions object
     const msgActions = actions && (message.role == "assistant" ? (<>
         <SmallIconButton
             title="Copiar"
@@ -140,18 +143,32 @@ function ChatMessage({message, generating, actions, highlight}) {
             icon={EditIcon} />
     </>) : (<></>));
 
+    const getModelDetail = (title, detail) => detail ? <li><b>{title}</b>{detail}</li> : null;
+    const modelDetails = actions && message.role == "assistant" ? <>
+        &middot; <ActionLink action={() => setDetailsOpen(true)}>
+            <small>{message.details.model ?? "Más detalles"}</small>
+        </ActionLink>
+        <ModalBox
+            open={detailsOpen}
+            onClose={() => setDetailsOpen(false)}
+            id="message-details"
+            title="Detalles del mensaje">
+            <ul>
+                {getModelDetail("Modelo usado: ", message.details.model)}
+                {getModelDetail("Tokens totales: ", message.details.totalTokens)}
+                {getModelDetail("Tokens del prompt: ", message.details.promptTokens)}
+                {getModelDetail("Tokens de respuesta: ", message.details.answerTokens)}
+            </ul>
+        </ModalBox>
+    </> : null;
+
     const highlighted = highlight === message.idx;
 
     useEffect(() => {
-        //let html = markdown.render(message.message);
-        //console.log("text", html);
         messageRef.current.innerHTML = htmlMsg;
         if (message.thinking) {
-            //let thinkHtml = markdown.render(message.thinking);
-            //console.log("think", thinkHtml);
             thinkingRef.current.innerHTML = htmlThink;
         }
-        //console.log(message.message, "-", html);
     }, [htmlMsg, htmlThink]);
 
     useEffect(() => {
@@ -169,6 +186,7 @@ function ChatMessage({message, generating, actions, highlight}) {
                 {toolAccordions}
                 <div>
                     {msgActions}
+                    {modelDetails}
                 </div>
             </div>
         </div>

@@ -1,6 +1,6 @@
 # Chatbot IA
 
-Simple chatbot de IA que utiliza modelos gratuitos de Kilo AI Gateway.
+Simple chatbot de IA que utiliza modelos gratuitos de Kilo AI Gateway. Disponible [en vivo acá](https://facua0.github.io/chatbot-ia).
 
 Incluye:
 
@@ -18,7 +18,7 @@ No incluye:
 
 Hecho utilizando React, Vite y componentes Material UI de mui.com.
 
-## Instalación y uso
+## Instalación y desarrollo
 
 Se requiere Node.js 20.19, o 22.12 o superior.
 

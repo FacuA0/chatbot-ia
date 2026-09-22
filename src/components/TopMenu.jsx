@@ -4,8 +4,6 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import IconButton from '@mui/material/IconButton';
-import Modal from '@mui/material/Modal';
-import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -14,21 +12,7 @@ import MenuIcon from '@mui/icons-material/MoreVert';
 import { getModels } from "../utils";
 import { getAllTools } from "../tools";
 import SmallIconButton from './SmallIconButton';
-
-const toolConfigStyle = {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 420,
-    maxWidth: 'calc(100% - 24px)',
-    boxSizing: 'border-box',
-    bgcolor: 'background.paper',
-    border: '0px',
-    borderRadius: "12px",
-    boxShadow: 24,
-    p: 3,
-};
+import ModalBox from './ModalBox';
 
 function TopMenu({config, setConfig, setError, exportChat}) {
     const [anchorMenu, setAnchorMenu] = useState(null);
@@ -195,46 +179,38 @@ function TopMenu({config, setConfig, setError, exportChat}) {
                 onClose={closeTool}>
                 {toolList}
             </Menu>
-            <Modal
+            <ModalBox
                 open={configDialog != null}
                 onClose={closeToolConfig}
-                aria-labelledby="tool-config-title">
-                <Box sx={toolConfigStyle}>
-                    <h4 id="tool-config-title" style={{marginTop: "4px"}}>
-                        Opciones de {configDialog?.name ?? "<cerrado>"}
-                    </h4>
-                    {configOptions}
-                </Box>
-            </Modal>
-            <Modal
+                id="tool-config"
+                title={"Opciones de " + configDialog?.name ?? "<cerrado>"}>
+                {configOptions}
+            </ModalBox>
+            <ModalBox
                 open={proxyDialog}
                 onClose={closeProxyConfig}
-                aria-labelledby="proxy-config-title">
-                <Box sx={toolConfigStyle}>
-                    <h4 id="proxy-config-title" style={{marginTop: "4px"}}>
-                        Proxy CORS
-                    </h4>
-                    <p id="proxy-config-title" style={{marginBottom: "20px"}}>
-                        Configurar proxy para que la página interactúe con sitios externos.
-                    </p>
-                    <TextField
-                        id="field-url-proxy"
-                        variant="outlined"
-                        fullWidth
-                        label="URL de proxy"
-                        onChange={e => changeProxyConfig(e.target.value)}
-                        value={config.proxy}/>
-                    
-                    <Button variant="text" 
-                        onClick={() => changeProxyConfig("https://cors-anywhere.herokuapp.com/")}>
-                        Usar proxy público
-                    </Button>
-                    {location.hostname == "localhost" ? <Button variant="text" 
-                        onClick={() => changeProxyConfig("http://localhost:5174/")}>
-                        Usar localhost
-                    </Button> : null}
-                </Box>
-            </Modal>
+                id="proxy-config"
+                title="Proxy CORS">
+                <p id="proxy-config-content" style={{marginBottom: "20px"}}>
+                    Configurar proxy para que la página interactúe con sitios externos.
+                </p>
+                <TextField
+                    id="field-url-proxy"
+                    variant="outlined"
+                    fullWidth
+                    label="URL de proxy"
+                    onChange={e => changeProxyConfig(e.target.value)}
+                    value={config.proxy}/>
+                
+                <Button variant="text" 
+                    onClick={() => changeProxyConfig("https://cors-anywhere.herokuapp.com/")}>
+                    Usar proxy público
+                </Button>
+                {location.hostname == "localhost" ? <Button variant="text" 
+                    onClick={() => changeProxyConfig("http://localhost:5174/")}>
+                    Usar localhost
+                </Button> : null}
+            </ModalBox>
         </div>
     );
 }
