@@ -165,12 +165,12 @@ function App() {
         }
         catch (err) {
             cancelUpdates();
-            if (!err.toString().includes("AbortError")) {
+            if (err.toString().includes("/corsdemo")) {
+                setBannerProxy(true);
+            }
+            else if (!err.toString().includes("AbortError")) {
                 setError(err);
                 console.error(err);
-                if (err.toString().includes("/corsdemo")) {
-                    setBannerProxy(true);
-                }
             }
         }
 
@@ -213,7 +213,7 @@ function App() {
         if (await checkPublicProxy()) {
             setBannerProxy(false);
             clearInterval(proxyCheckRef.current[0]);
-            clearTimeout(proxyCheckMaxRef.current[1]);
+            clearTimeout(proxyCheckRef.current[1]);
             proxyCheckRef.current = null;
         }
     }
@@ -222,11 +222,20 @@ function App() {
         open("https://cors-anywhere.herokuapp.com/corsdemo");
 
         setTimeout(() => {
-            proxyCheckRef.current = [setInterval(recheckProxy, 20000), setTimeout(() => {
-                clearInterval(proxyCheckRef.current[0]);
-                proxyCheckRef.current = null;
-            }, 10 * 60 * 1000)];
-        }, 10000);
+            proxyCheckRef.current = [
+                setInterval(recheckProxy, 5000),
+                setTimeout(() => {
+                    clearInterval(proxyCheckRef.current[0]);
+                    proxyCheckRef.current = [
+                        setInterval(recheckProxy, 20000),
+                        setTimeout(() => {
+                            clearInterval(proxyCheckRef.current[0]);
+                            proxyCheckRef.current = null;
+                        }, 10 * 60 * 1000)
+                    ];
+                }, 40000)
+            ];
+        }, 8000);
     }
     
     const bannerDiv = bannerProxy ? <Alert 
