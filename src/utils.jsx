@@ -113,7 +113,7 @@ async function queryOpenAIEndpoint(chat, config, updateCurrent, abort) {
                 break;
             case "response.output_item.done":
                 if (json.item.type == "reasoning" && json.item.encrypted_content) {
-                    acumThink += "<encrypted reasoning>";
+                    acumThink += "<razonamiento cifrado>";
                 }
                 break;
             case "response.content_part.added":
@@ -342,11 +342,18 @@ export async function generateFakeAnswer(text, updateCurrent, abort) {
         }];
     }
 
+    let details = {
+        model: "fake-model",
+        promptTokens: thinkTokens.length - 8,
+        answerTokens: textTokens.length,
+        totalTokens: thinkTokens.length + textTokens.length
+    }
+
     return {
         message: res,
         thinking: finalThink,
         toolCalls,
-        details: {}
+        details
     };
     
     function wait(ms, abort) {
