@@ -6,7 +6,7 @@ import AlertDialog from './components/AlertDialog'
 import { Alert, Button } from '@mui/material'
 import './App.css'
 import { generateFakeAnswer, getDefaultConfig, queryAI, checkPublicProxy } from './utils'
-import { processToolCall } from "./tools"
+import { processToolCalls } from "./tools"
 
 function App() {
     const [config, setConfig] = useState(getDefaultConfig);
@@ -144,16 +144,14 @@ function App() {
                 if (ans.toolCalls.length > 0 && !abort.signal.aborted) {
                     iterate = true;
 
-                    for (let call of ans.toolCalls) {
-                        if (call.type != "function") continue;
-
-                        let toolMsg = await processToolCall(config, call, {abort});
-
-                        msgList = addMessage(msgList, "tool", toolMsg, null, null, {
-                            tool_call_id: call.id
+                    let toolResults = await processToolCalls(config, ans.toolCalls, {abort});
+                    
+                    for (let res of toolResults) {
+                        msgList = addMessage(msgList, "tool", res.msg, null, null, {
+                            tool_call_id: res.id
                         });
-                        setMessageList(msgList);
                     }
+                    setMessageList(msgList);
                 }
                 else {
                     iterate = false;

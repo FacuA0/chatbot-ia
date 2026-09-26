@@ -17,22 +17,50 @@ export function getAllTools() {
     return tools;
 }
 
-export async function processToolCall(config, call, extra) {
+export async function processToolCalls(config, calls, extra) {
+    let promises = [];
+
+    for (let call of calls) {
+        if (call.type != "function") continue;
+
+        let toolPromise = processToolCall(config, call, extra);
+
+        promises.push({
+            id: call.id,
+            prom: toolPromise
+        });
+    }
+
+    let toolResults = [];
+    for (let promise of promises) {
+        toolResults.push({
+            id: promise.id,
+            msg: await promise.prom
+        });
+    }
+
+    return toolResults;
+}
+
+async function processToolCall(config, call, extra) {
     try {
-        let args = JSON.parse(call.function.arguments);
+        let args = parseToolCallArgs(call.function.arguments);
         let tool = getTool(config, call.function.name);
-        if (tool == null) {
+        if (tool == null)
             throw new Error("Invalid tool name: " + call.function.name);
-        }
 
         return await tool.execute(args, config.tools[tool.name], extra);
     }
     catch (err) {
-        let errMsg = err.message;
-        if (errMsg.includes("JSON.parse")) {
-            errMsg = "Malformed JSON parameters object.";
-        }
+        return "Tool error: " + err.message;
+    }
+}
 
-        return "Tool error: " + errMsg;
+function parseToolCallArgs(args) {
+    try {
+        return JSON.parse(args);
+    }
+    catch (err) {
+        throw new Error("Malformed JSON parameters object.");
     }
 }
