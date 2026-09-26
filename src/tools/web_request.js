@@ -36,7 +36,7 @@ export default class WebRequestTool extends Tool {
         this.turndown.remove("style");
     }
 
-    async execute(args, _config, extra) {
+    async execute(args, config, extra) {
         if (typeof args.url != "string")
             throw new Error("Invalid URL param: not a string or doesn't exist.");
         if (args.raw != null && typeof args.raw != "boolean")
@@ -44,7 +44,7 @@ export default class WebRequestTool extends Tool {
 
         let url = new URL(args.url);
 
-        let webRes = await fetch("http://localhost:5174/" + url, {
+        let webRes = await fetch(config.proxy + url, {
             signal: extra.abort.signal
         });
         let body = await webRes.text();

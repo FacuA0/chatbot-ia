@@ -49,7 +49,7 @@ async function processToolCall(config, call, extra) {
         if (tool == null)
             throw new Error("Invalid tool name: " + call.function.name);
 
-        return await tool.execute(args, config.tools[tool.name], extra);
+        return await tool.execute(args, config, extra);
     }
     catch (err) {
         return "Tool error: " + err.message;

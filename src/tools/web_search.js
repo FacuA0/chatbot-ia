@@ -26,14 +26,14 @@ export default class WebRequestTool extends Tool {
         if (typeof args.query != "string")
             throw new Error("Invalid query arg: not a string or doesn't exist.");
 
-        if (!config.ollamaApiKey) {
-            throw new Error("No API key present, ask the user to configure one in the tool.");
-        }
+        let apiKey = config.tools[this.name].ollamaApiKey;
+        if (!apiKey)
+            throw new Error("No API key present, ask the user to configure one in the tool settings.");
 
-        let webRes = await fetch("http://localhost:5174/https://ollama.com/api/web_search", {
+        let webRes = await fetch(config.proxy + "https://ollama.com/api/web_search", {
             method: "POST",
             headers: {
-                "Authorization": "Bearer " + config.ollamaApiKey
+                "Authorization": "Bearer " + apiKey
             },
             body: JSON.stringify({
                 query: args.query
