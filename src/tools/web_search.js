@@ -1,6 +1,6 @@
 import { Tool } from "./dummy_tool";
 
-export default class WebRequestTool extends Tool {
+export default class WebSearchTool extends Tool {
     name = "web_search";
     description = "Make a web search";
     parameters = {

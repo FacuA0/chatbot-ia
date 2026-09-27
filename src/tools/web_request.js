@@ -1,4 +1,5 @@
 import { Tool } from "./dummy_tool";
+import TurndownService from "turndown";
 
 export default class WebRequestTool extends Tool {
     name = "web_request";
@@ -49,7 +50,7 @@ export default class WebRequestTool extends Tool {
         });
         let body = await webRes.text();
 
-        if (webRes.headers.get("Content-Type").includes("text/html") && !args.raw) {
+        if (webRes.headers.get("Content-Type")?.includes?.("text/html") && !args.raw) {
             body = this.turndown.turndown(body);
         }
 
