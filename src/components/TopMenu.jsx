@@ -183,7 +183,7 @@ function TopMenu({config, setConfig, setError, exportChat}) {
                 open={configDialog != null}
                 onClose={closeToolConfig}
                 id="tool-config"
-                title={"Opciones de " + configDialog?.name ?? "<cerrado>"}>
+                title={"Opciones de " + (configDialog?.name ?? "<cerrado>")}>
                 {configOptions}
             </ModalBox>
             <ModalBox

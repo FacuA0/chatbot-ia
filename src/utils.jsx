@@ -13,6 +13,9 @@ export async function queryAI(chat, config, updateCurrent, abort) {
     else if (config.model.api == API_OPENAI) {
         return queryOpenAIEndpoint(chat, config, updateCurrent, abort);
     }
+
+    console.error("No soportado:", config.model.api);
+    throw new Error("Proveedor incompatible.");
 }
 
 async function queryOpenAIEndpoint(chat, config, updateCurrent, abort) {
@@ -417,7 +420,7 @@ async function* getStreamedEvents(events) {
 
     try {
         for await (const chunk of events) {
-            textPart += decoder.decode(chunk.buffer);
+            textPart += decoder.decode(chunk.buffer, {stream: true});
     
             //console.debug(1, textPart);
     

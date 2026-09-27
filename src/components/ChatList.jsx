@@ -15,7 +15,7 @@ function ChatList({msgList, currentMsg, error, generating, actions, highlight}) 
     for (let msg of msgList) {
         if (msg.role == "assistant") {
             aiMsg = msg;
-            newMsgList.push(msg);
+            newMsgList.push(structuredClone(msg));
         }
         else if (msg.role == "tool" && aiMsg) {
             let call = aiMsg.extra?.tool_calls?.find?.(c => c.id === msg.extra?.tool_call_id);
