@@ -14,7 +14,7 @@ import { getAllTools } from "../tools";
 import SmallIconButton from './SmallIconButton';
 import ModalBox from './ModalBox';
 
-function TopMenu({config, setConfig, setError, exportChat}) {
+function TopMenu({config, proxyError, setConfig, setError, exportChat}) {
     const [anchorMenu, setAnchorMenu] = useState(null);
     const [anchorModel, setAnchorModel] = useState(null);
     const [anchorTool, setAnchorTool] = useState(null);
@@ -88,7 +88,7 @@ function TopMenu({config, setConfig, setError, exportChat}) {
         setProxyDialog(false);
     }
 
-    function exportChat2(i) {
+    function exportChat2() {
         exportChat();
         closeMenu();
     }
@@ -129,14 +129,15 @@ function TopMenu({config, setConfig, setError, exportChat}) {
                 onChange={e => changeToolConfig(conf[0], e.target.value)}
                 value={config.tools[configDialog.name][conf[0]]}/>
         ) : (
-            <p id={`field-config-${conf[0]}`}>
+            <p key={`field-config-${conf[0]}`}
+                id={`field-config-${conf[0]}`}>
                 <i>Opción {conf[0]} de tipo {conf[1].type} no soportado</i>
             </p>
         )
     )) : [];
 
     useEffect(() => {
-        if (models.length > 0)
+        if (models.length > 0 || proxyError)
             return;
 
         getModels(config)
@@ -147,7 +148,7 @@ function TopMenu({config, setConfig, setError, exportChat}) {
             err.noRetry = true;
             setError(err);
         });
-    }, [config]);
+    }, [config, proxyError]);
 
     return (
         <div id="menu">

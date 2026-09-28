@@ -2,7 +2,7 @@ import { useEffect, useRef, useMemo, memo, useState } from "react";
 import markdownit from "markdown-it";
 import texmath from "markdown-it-texmath";
 import katex from "katex";
-import highlight from "highlight.js";
+import highlight from "highlight.js/lib/common";
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
