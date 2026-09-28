@@ -322,14 +322,14 @@ export async function generateFakeAnswer(text, updateCurrent, abort) {
     for (let i = 0; i < thinkTokens.length && !abort.aborted; i++) {
         newAcum += thinkTokens[i];
         updateCurrent("", newAcum);
-        await wait(thinkWaitTime);
+        await wait(thinkWaitTime, abort);
     }
     
     newAcum = "";
     for (let i = 0; i < textTokens.length && !abort.aborted; i++) {
         newAcum += textTokens[i];
         updateCurrent(newAcum, finalThink);
-        await wait(textWaitTime);
+        await wait(textWaitTime, abort);
     }
 
     let toolCalls = [];
@@ -358,20 +358,13 @@ export async function generateFakeAnswer(text, updateCurrent, abort) {
         toolCalls,
         details
     };
-    
-    function wait(ms, abort) {
-        return new Promise(res => {
-            abort?.addEventListener?.("abort", res);
-            setTimeout(() => {
-                abort?.removeEventListener?.("abort", res);
-                res();
-            }, ms);
-        });
-    }
 }
 
 export async function getModels(config) {
     let res = await fetch(config.proxy + "https://models.dev/api.json");
+    if (!res.ok)
+        throw new Error(errorMessage((await res.text()).slice(0, 1024)));
+
     let json = await res.json();
     
     let models = Object.entries(json.kilo?.models ?? {})
@@ -496,4 +489,30 @@ function errorMessage(body) {
         console.error(body);
         return body.slice(0, 256);
     }
+}
+
+export function setVariedInterval(func, signal, start, ...times) {
+    setTimeout(async () => {
+        if (signal?.aborted)
+            return;
+
+        for (let time of times) {
+            let int = setInterval(func, time[0]);
+            await wait(time[1], signal);
+            clearInterval(int);
+
+            if (signal?.aborted)
+                break;
+        }
+    }, start);
+}
+
+function wait(ms, abort) {
+    return new Promise(res => {
+        abort?.addEventListener?.("abort", res);
+        setTimeout(() => {
+            abort?.removeEventListener?.("abort", res);
+            res();
+        }, ms);
+    });
 }

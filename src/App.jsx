@@ -5,7 +5,7 @@ import InputBar from './components/InputBar'
 import AlertDialog from './components/AlertDialog'
 import { Alert, Button } from '@mui/material'
 import './App.css'
-import { generateFakeAnswer, getDefaultConfig, queryAI, checkPublicProxy } from './utils'
+import { generateFakeAnswer, getDefaultConfig, queryAI, checkPublicProxy, setVariedInterval } from './utils'
 import { processToolCalls } from "./tools"
 
 function App() {
@@ -17,10 +17,19 @@ function App() {
     const [highlight, setHighlight] = useState(null);
     const [edition, setEdition] = useState(null);
     const [proxyAlert, setProxyAlert] = useState(false);
-    const [bannerProxy, setBannerProxy] = useState(false);
+    const [proxyBanner, setProxyBanner] = useState(false);
     const proxyCheckRef = useRef(null);
     const pendingRef = useRef(null);
     const rafRef = useRef(null);
+
+    function setGlobalError(error) {
+        if (error.message.includes("/corsdemo")) {
+            setProxyBanner(true);
+        }
+        else {
+            setError(error);
+        }
+    }
 
     function exportChat() {
         let a = document.createElement("a");
@@ -134,7 +143,7 @@ function App() {
                 //console.debug("Four ", JSON.stringify(msgList));
                 cancelUpdates();
                 setCurMessage(null);
-                setBannerProxy(false);
+                setProxyBanner(false);
 
                 let toolCallsObj = ans.toolCalls.length > 0 ? {tool_calls: ans.toolCalls} : {}
                 msgList = addMessage(msgList, "assistant", ans.message, ans.thinking, ans.details, toolCallsObj);
@@ -164,7 +173,7 @@ function App() {
         catch (err) {
             cancelUpdates();
             if (err.toString().includes("/corsdemo")) {
-                setBannerProxy(true);
+                setProxyBanner(true);
             }
             else if (!err.toString().includes("AbortError")) {
                 setError(err);
@@ -209,34 +218,30 @@ function App() {
 
     async function recheckProxy() {
         if (await checkPublicProxy()) {
-            setBannerProxy(false);
-            clearInterval(proxyCheckRef.current[0]);
-            clearTimeout(proxyCheckRef.current[1]);
+            setProxyBanner(false);
+            proxyCheckRef.current?.abort?.();
             proxyCheckRef.current = null;
         }
     }
 
     function goToEnableProxy() {
         open("https://cors-anywhere.herokuapp.com/corsdemo");
+        if (proxyCheckRef.current)
+            return;
 
-        setTimeout(() => {
-            proxyCheckRef.current = [
-                setInterval(recheckProxy, 5000),
-                setTimeout(() => {
-                    clearInterval(proxyCheckRef.current[0]);
-                    proxyCheckRef.current = [
-                        setInterval(recheckProxy, 20000),
-                        setTimeout(() => {
-                            clearInterval(proxyCheckRef.current[0]);
-                            proxyCheckRef.current = null;
-                        }, 10 * 60 * 1000)
-                    ];
-                }, 40000)
-            ];
-        }, 8000);
+        document.addEventListener("visibilitychange", change);
+        function change() {
+            if (document.visibilityState != 'visible')
+                return;
+
+            let abort = new AbortController();
+            proxyCheckRef.current = abort;
+            setVariedInterval(recheckProxy, abort.signal, 500, [3000, 12000], [8000, 60000], [20000, 10 * 60 * 1000]);
+            document.removeEventListener("visibilitychange", change);
+        }
     }
     
-    const bannerDiv = bannerProxy ? <Alert 
+    const bannerDiv = proxyBanner ? <Alert 
         severity='info' 
         action={
             <Button color="inherit" size="small" onClick={goToEnableProxy}>
@@ -254,7 +259,7 @@ function App() {
         if (location.hostname != "localhost") {
             checkPublicProxy().then(active => {
                 if (!active) {
-                    setBannerProxy(true);
+                    setProxyBanner(true);
                     setProxyAlert(true);
                 }
             });
@@ -267,8 +272,9 @@ function App() {
                 <h1>Chatbot IA</h1>
                 <TopMenu 
                     config={config}
+                    proxyError={proxyBanner}
                     setConfig={setConfig}
-                    setError={setError}
+                    setError={setGlobalError}
                     exportChat={exportChat}/>
             </header>
             {bannerDiv}
