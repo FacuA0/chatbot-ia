@@ -381,15 +381,40 @@ export async function getModels(config) {
 
 export function newChat() {
     let chats = getChats();
+
+    let maxId = 0;
+    for (let chat of chats) {
+        maxId = Math.max(maxId, chat.id);
+    }
+
     let chat = {
-        id: chats.length,
-        title: "Chat #" + (chats.length + 1)
+        id: maxId + 1,
+        title: "Chat #" + (maxId + 1)
     };
 
     chats.unshift(chat);
     localStorage.setItem("chats", JSON.stringify(chats));
 
     return chat;
+}
+
+export function deleteChat(chat) {
+    let chats = getChats();
+
+    chats.splice(chats.findIndex(ch => ch.id == chat.id), 1);
+    localStorage.setItem("chats", JSON.stringify(chats));
+
+    deleteMessages(chat, 0, 2147483647)
+        .catch(err => console.error("Error al eliminar mensajes de chat borrado:", err));
+}
+
+export function renameChat(chat, newName) {
+    let chats = getChats();
+
+    chat.title = newName;
+
+    chats.splice(chats.findIndex(ch => ch.id == chat.id), 1, chat);
+    localStorage.setItem("chats", JSON.stringify(chats));
 }
 
 export function getChats() {
@@ -475,8 +500,8 @@ export function storeNewMessage(chat, message) {
 
 export function deleteMessages(chat, firstMsg, lastMsg) {
     let chatPart = chat.id.toString().padStart(10, "0");
-    let lowerChatIdx = chatPart + "-" + firstMsg.idx.toString().padStart(10, "0");
-    let upperChatIdx = chatPart + "-" + lastMsg.idx.toString().padStart(10, "0");
+    let lowerChatIdx = chatPart + "-" + firstMsg.toString().padStart(10, "0");
+    let upperChatIdx = chatPart + "-" + lastMsg.toString().padStart(10, "0");
 
     return new Promise(async (resolve, reject) => {
         try {

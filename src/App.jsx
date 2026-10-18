@@ -58,7 +58,7 @@ function App() {
         if (prevMsgs.length == 0) return;
     
         setMessageList(prevMsgs);
-        await deleteMessages(chat, messageList[lastInd], messageList[messageList.length - 1]);
+        await deleteMessages(chat, messageList[lastInd].idx, messageList[messageList.length - 1].idx);
 
         generateAnswer(chat, prevMsgs);
     }, [config, chat, messageList]);
@@ -70,7 +70,7 @@ function App() {
 
         setMessageList(prevMsgs);
         if (lastInd < messageList.length)
-            await deleteMessages(chat, messageList[lastInd], messageList[messageList.length - 1]);
+            await deleteMessages(chat, messageList[lastInd].idx, messageList[messageList.length - 1].idx);
 
         generateAnswer(chat, prevMsgs);
     }, [config, chat, messageList]);
@@ -140,7 +140,7 @@ function App() {
         let msgList = [...messageList];
         if (edition != null) {
             msgList = msgList.slice(0, edition.idx);
-            await deleteMessages(chat, messageList[edition.idx], messageList[messageList.length - 1]);
+            await deleteMessages(chat, messageList[edition.idx].idx, messageList[messageList.length - 1].idx);
             setEdition(null);
         }
         
