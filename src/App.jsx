@@ -1,18 +1,24 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import TopMenu from './components/TopMenu'
 import ChatList from './components/ChatList'
+import TopMenu from './components/TopMenu'
+import MessageList from './components/MessageList'
 import InputBar from './components/InputBar'
 import AlertDialog from './components/AlertDialog'
 import { Alert, Button } from '@mui/material'
 import './App.css'
-import { generateFakeAnswer, getDefaultConfig, queryAI, checkPublicProxy, setVariedInterval } from './utils'
 import { processToolCalls } from "./tools"
+import { generateFakeAnswer, getDefaultConfig, queryAI, 
+    checkPublicProxy, setVariedInterval, newChat, 
+    getChatMessages,
+    storeNewMessage,
+    deleteMessages} from './utils'
 
 function App() {
     const [config, setConfig] = useState(getDefaultConfig);
     const [generation, setGeneration] = useState(null);
     const [curMessage, setCurMessage] = useState(null);
     const [error, setError] = useState(null);
+    const [chat, setChat] = useState({});
     const [messageList, setMessageList] = useState([]);
     const [highlight, setHighlight] = useState(null);
     const [edition, setEdition] = useState(null);
@@ -46,21 +52,28 @@ function App() {
         });
     }, [messageList]);
 
-    const regenerateSince = useCallback((index) => {
-        let prevMsgs = messageList.slice(0, messageList.findLastIndex(msg => msg.idx == index));
+    const regenerateSince = useCallback(async (index) => {
+        let lastInd = messageList.findLastIndex(msg => msg.idx == index);
+        let prevMsgs = messageList.slice(0, lastInd);
         if (prevMsgs.length == 0) return;
     
         setMessageList(prevMsgs);
-        generateAnswer(prevMsgs);
-    }, [messageList, config]);
+        await deleteMessages(chat, messageList[lastInd], messageList[messageList.length - 1]);
 
-    const tryAgain = useCallback(() => {
-        let prevMsgs = messageList.slice(0, messageList.findLastIndex(msg => msg.role != "assistant") + 1);
+        generateAnswer(chat, prevMsgs);
+    }, [config, chat, messageList]);
+
+    const tryAgain = useCallback(async () => {
+        let lastInd = messageList.findLastIndex(msg => msg.role != "assistant") + 1;
+        let prevMsgs = messageList.slice(0, lastInd);
         if (prevMsgs.length == 0) return;
 
         setMessageList(prevMsgs);
-        generateAnswer(prevMsgs);
-    }, [messageList, config]);
+        if (lastInd < messageList.length)
+            await deleteMessages(chat, messageList[lastInd], messageList[messageList.length - 1]);
+
+        generateAnswer(chat, prevMsgs);
+    }, [config, chat, messageList]);
 
     function goToEdit() {
         setHighlight(edition.idx);
@@ -79,9 +92,24 @@ function App() {
         }
     }
 
+    /*
     function resetChat() {
         setMessageList([]);
         setGeneration(null);
+        setEdition(null);
+        setCurMessage(null);
+        setError(null);
+    }*/
+
+    async function setCurrentChat(newChat) {
+        if (newChat.id != null) {
+            setMessageList(await getChatMessages(newChat));
+        }
+        else {
+            setMessageList([]);
+        }
+
+        setChat(newChat);
         setEdition(null);
         setCurMessage(null);
         setError(null);
@@ -108,23 +136,33 @@ function App() {
         return newList;
     }
     
-    function sendMessage(text, options = {}) {
+    async function sendMessage(text, options = {}) {
         let msgList = [...messageList];
         if (edition != null) {
             msgList = msgList.slice(0, edition.idx);
+            await deleteMessages(chat, messageList[edition.idx], messageList[messageList.length - 1]);
             setEdition(null);
         }
-
+        
         //console.debug("One ", JSON.stringify(msgList));
         msgList = addMessage(msgList, "user", text);
         setMessageList(msgList);
+        
+        let curChat = chat;
+        if (chat.id == null) {
+            curChat = newChat();
+            setChat(curChat);
+        }
+
+        storeNewMessage(curChat, msgList[msgList.length - 1])
+            .catch(err => console.error("No se pudo guardar el mensaje", err));
 
         //console.debug("Two ", JSON.stringify(msgList));
         
-        generateAnswer(msgList, options);
+        generateAnswer(curChat, msgList, options);
     }
 
-    async function generateAnswer(msgList, options) {
+    async function generateAnswer(curChat, msgList, options) {
         let abort = new AbortController();
         setGeneration(abort);
         setError(null);
@@ -148,6 +186,8 @@ function App() {
                 let toolCallsObj = ans.toolCalls.length > 0 ? {tool_calls: ans.toolCalls} : {}
                 msgList = addMessage(msgList, "assistant", ans.message, ans.thinking, ans.details, toolCallsObj);
                 setMessageList(msgList);
+                storeNewMessage(curChat, msgList[msgList.length - 1])
+                    .catch(err => console.error("No se pudo guardar el mensaje", err));
 
                 //console.debug("Five ", JSON.stringify(msgList));
                 if (ans.toolCalls.length > 0 && !abort.signal.aborted) {
@@ -159,6 +199,8 @@ function App() {
                         msgList = addMessage(msgList, "tool", res.msg, null, null, {
                             tool_call_id: res.id
                         });
+                        storeNewMessage(curChat, msgList[msgList.length - 1])
+                            .catch(err => console.error("No se pudo guardar el mensaje", err));
                     }
                     setMessageList(msgList);
                 }
@@ -269,6 +311,9 @@ function App() {
     return (
         <main>
             <header>
+                <ChatList
+                    curChat={chat}
+                    setCurChat={setCurrentChat}/>
                 <h1>Chatbot IA</h1>
                 <TopMenu 
                     config={config}
@@ -279,7 +324,7 @@ function App() {
             </header>
             {bannerDiv}
 
-            <ChatList
+            <MessageList
                 msgList={messageList}
                 currentMsg={curMessage}
                 error={error}
@@ -288,7 +333,7 @@ function App() {
                 highlight={highlight}/>
             <InputBar
                 sendMsg={sendMessage}
-                resetChat={resetChat}
+                /*resetChat={resetChat}*/
                 stopGen={stopGeneration}
                 stopEdit={stopEditing}
                 goToEdit={goToEdit}

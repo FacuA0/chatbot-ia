@@ -1,69 +1,71 @@
-import { memo } from "react";
-import ChatMessage from "./ChatMessage";
-import ActionLink from "./ActionLink";
-import Divider from '@mui/material/Divider'
+import { useState, useEffect } from 'react';
+import Tooltip from "@mui/material/Tooltip";
+import Drawer from "@mui/material/Drawer";
+import Divider from '@mui/material/Divider';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import IconButton from '@mui/material/IconButton';
+import MenuIcon from '@mui/icons-material/Menu';
+import AddIcon from '@mui/icons-material/Add';
+import Box from "@mui/material/Box"
+import { ListItemIcon, ListItemText } from '@mui/material';
+import { getChats } from '../utils';
 
-function ChatList({msgList, currentMsg, error, generating, actions, highlight}) {
-    /*let newMsgList = [];
-    for (let i = 0; i < msgList.length - 1; i++) {
-        if (msgList[i].toolCalls && msgList[i + 1].tool)
-    }*/
+function ChatList({curChat, setCurChat}) {
+    const [openDrawer, setOpenDrawer] = useState(false);
+    const [chats, setChats] = useState(getChats);
 
-    let tryAgain = () => actions.tryAgain();
+    const toggleDrawer = newOpen => () => {
+        setOpenDrawer(newOpen);
+    };
 
-    let newMsgList = [], aiMsg = null;
-    for (let msg of msgList) {
-        if (msg.role == "assistant") {
-            aiMsg = msg;
-            newMsgList.push(structuredClone(msg));
-        }
-        else if (msg.role == "tool" && aiMsg) {
-            let call = aiMsg.extra?.tool_calls?.find?.(c => c.id === msg.extra?.tool_call_id);
-            call.result = msg.message;
-        }
-        else {
-            aiMsg = null;
-            newMsgList.push(msg);
-        }
-    }
+    const setNewChat = () => setCurChat({});
+    const setPreviousChat = chat => () => setCurChat(chat);
+    
+    const createChat = <ListItem>
+        <ListItemButton onClick={setNewChat}>
+            <ListItemIcon>
+                <AddIcon />
+            </ListItemIcon>
+            <ListItemText primary="Nuevo chat"/>
+        </ListItemButton>
+    </ListItem>;
 
-    msgList = newMsgList;
+    const chatList = chats.map((chat, i) => <ListItem key={chat.id}>
+        <ListItemButton 
+            onClick={setPreviousChat(chat)}
+            selected={curChat.id == chat.id}>
+            <ListItemText primary={chat.title}/>
+        </ListItemButton>
+    </ListItem>);
 
-    let chatList = msgList.map(msg => (
-        <ChatMessage 
-            key={msg.idx * 2}
-            message={msg}
-            generating={generating}
-            actions={actions}
-            highlight={highlight}/>
-    ));
-
-    for (let i = 1; i < chatList.length; i += 2) {
-        chatList.splice(i, 0, <Divider key={i}/>);
-    }
-
-    //console.log("Updated list", currentMsg);
-
-    const curMsg = currentMsg != null ? <>
-        <Divider/>
-        <ChatMessage message={currentMsg}/>
-    </> : "";
-
-    const errorMsg = error != null ? (
-        <div id="msg-error">
-            Hubo un error realizando la solicitud.&#x20;
-            {(!error.noRetry ? (<ActionLink action={tryAgain}>Vuelva a intentarlo.</ActionLink>) : (<></>))}
-            &#x20;{error + ""}
-        </div>
-    ) : "";
+    useEffect(() => {
+        setChats(getChats);
+    }, [curChat]);
 
     return (
-        <div id="chat-list">
-            {chatList}
-            {curMsg}
-            {errorMsg}
+        <div id="chat-menu">
+            <Tooltip title="Historial de chats">
+                <IconButton
+                    onClick={toggleDrawer(true)}>
+                    <MenuIcon/>
+                </IconButton>
+            </Tooltip>
+            <Drawer open={openDrawer} onClose={toggleDrawer(false)}>
+                <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
+                    <h2>Historial de chats</h2>
+                    <List>
+                        {createChat}
+                    </List>
+                    <Divider />
+                    <List>
+                        {chatList}
+                    </List>
+                </Box>
+            </Drawer>
         </div>
     );
 }
 
-export default memo(ChatList);
+export default ChatList;

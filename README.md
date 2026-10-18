@@ -5,6 +5,7 @@ Simple chatbot de IA que utiliza modelos gratuitos de Kilo AI Gateway. Disponibl
 Incluye:
 
 - Conversación multi-turno
+- Historial de chats
 - Streaming de respuestas
 - Razonamiento de modelos
 - Herramientas (calculadora, consulta web, búsqueda).
@@ -13,7 +14,6 @@ Incluye:
 No incluye:
 
 - MCP (todavía)
-- Historial de chats
 - Otros proveedores
 
 Hecho utilizando React, Vite y componentes Material UI de mui.com.

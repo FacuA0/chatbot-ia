@@ -6,11 +6,14 @@ header {
 header > h1 {
   text-align: center;
   flex: 1;
-  margin-left: 48px;
 }
 
 #menu {
   margin-right: 8px;
+}
+
+#chat-menu {
+  margin-left: 8px;
 }
 
 main {
@@ -20,9 +23,9 @@ main {
 }
 
 /*
- * <ChatList> component
+ * <MessageList> component
  */
-#chat-list {
+#message-list {
   flex: 1;
   overflow-y: auto;
   scroll-behavior: smooth;
