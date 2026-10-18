@@ -379,6 +379,139 @@ export async function getModels(config) {
     return models;
 }
 
+export function newChat() {
+    let chats = getChats();
+    let chat = {
+        id: chats.length,
+        title: "Chat #" + (chats.length + 1)
+    };
+
+    chats.unshift(chat);
+    localStorage.setItem("chats", JSON.stringify(chats));
+
+    return chat;
+}
+
+export function getChats() {
+    let chats = JSON.parse(localStorage.getItem("chats") ?? "[]");
+    return chats;
+}
+
+export async function getChatMessages(chat) {
+    return new Promise(async (resolve, reject) => {
+        let lowerBound = chat.id.toString().padStart(10, "0");
+        let upperBound = (chat.id + 1).toString().padStart(10, "0");
+
+        try {
+            let db = await openDB();
+            let req = db.transaction(["messages"])
+                .objectStore("messages")
+                .index("chatMsgIdx")
+                .getAll(IDBKeyRange.bound(lowerBound, upperBound, false, true));
+            
+            req.onsuccess = () => {
+                db.close();
+                resolve(req.result.map(dbMsg => dbMsg.message));
+            };
+    
+            req.onerror = reject;
+            db.onerror = reject;
+        }
+        catch (err) {
+            reject(err);
+        }
+    });
+}
+
+function openDB() {
+    return new Promise((res, rej) => {
+        let dbRequest = indexedDB.open("ChatbotDB");
+        dbRequest.onerror = err => {
+            rej(err);
+        };
+        dbRequest.onupgradeneeded = evt => {
+            let db = evt.target.result;
+
+            let store = db.createObjectStore("messages", {
+                keyPath: "id",
+                autoIncrement: true
+            });
+
+            store.createIndex("chatMsgIdx", "chatIdx", {unique: true});
+        };
+        dbRequest.onsuccess = evt => {
+            res(evt.target.result);
+        }
+    });
+}
+
+export function storeNewMessage(chat, message) {
+    let msgsObj = {
+        chatId: chat.id,
+        chatIdx: chat.id.toString().padStart(10, "0") + "-" + message.idx.toString().padStart(10, "0"),
+        message: message
+    };
+
+    return new Promise(async (resolve, reject) => {
+        try {
+            let db = await openDB();
+            let req = db.transaction(["messages"], "readwrite")
+                .objectStore("messages")
+                .add(msgsObj);
+            
+            req.onsuccess = () => {
+                db.close();
+                resolve();
+            };
+    
+            req.onerror = reject;
+            db.onerror = reject;
+        }
+        catch (err) {
+            reject(err);
+        }
+    });
+}
+
+export function deleteMessages(chat, firstMsg, lastMsg) {
+    let chatPart = chat.id.toString().padStart(10, "0");
+    let lowerChatIdx = chatPart + "-" + firstMsg.idx.toString().padStart(10, "0");
+    let upperChatIdx = chatPart + "-" + lastMsg.idx.toString().padStart(10, "0");
+
+    return new Promise(async (resolve, reject) => {
+        try {
+            let db = await openDB();
+            let store = db.transaction(["messages"], "readwrite")
+                .objectStore("messages");
+
+            let req = store.index("chatMsgIdx")
+                .getAllKeys(IDBKeyRange.bound(lowerChatIdx, upperChatIdx));
+            
+            req.onsuccess = () => {
+                let proms = [];
+                for (let key of req.result) {
+                    let req2 = store.delete(key);
+                    proms.push(new Promise((res, rej) => {
+                        req2.onsuccess = res;
+                        req2.onerror = rej;
+                    }));
+                }
+
+                Promise.all(proms)
+                    .then(() => (db.close(), null))
+                    .then(resolve)
+                    .catch(reject);
+            };
+
+            req.onerror = reject;
+            db.onerror = reject;
+        }
+        catch (err) {
+            reject(err);
+        }
+    });
+}
+
 export function getDefaultConfig() {
     let tools = {};
     for (let tool of getAllTools()) {
