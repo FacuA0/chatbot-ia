@@ -94,7 +94,7 @@ function ChatList({curChat, setCurChat}) {
                     <MenuIcon/>
                 </IconButton>
             </Tooltip>
-            <Drawer open={openDrawer} onClose={toggleDrawer(false)}>
+            <Drawer open={openDrawer} onClose={toggleDrawer(false)} disableScrollLock={true}>
                 <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
                     <h2 style={{marginLeft: "1rem"}}>Historial de chats</h2>
                     <List>

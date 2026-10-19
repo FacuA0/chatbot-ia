@@ -382,14 +382,14 @@ export async function getModels(config) {
 export function newChat() {
     let chats = getChats();
 
-    let maxId = 0;
+    let maxId = -1;
     for (let chat of chats) {
         maxId = Math.max(maxId, chat.id);
     }
 
     let chat = {
         id: maxId + 1,
-        title: "Chat #" + (maxId + 1)
+        title: "Chat #" + (maxId + 2)
     };
 
     chats.unshift(chat);
@@ -423,20 +423,28 @@ export function getChats() {
 }
 
 export async function getChatMessages(chat) {
+    console.time("start");
     return new Promise(async (resolve, reject) => {
         let lowerBound = chat.id.toString().padStart(10, "0");
         let upperBound = (chat.id + 1).toString().padStart(10, "0");
 
         try {
+            console.timeEnd("start");
+            console.time("openDb");
             let db = await openDB();
+            console.timeEnd("openDb");
+            console.time("getAll");
             let req = db.transaction(["messages"])
                 .objectStore("messages")
                 .index("chatMsgIdx")
                 .getAll(IDBKeyRange.bound(lowerBound, upperBound, false, true));
             
             req.onsuccess = () => {
+                console.timeEnd("getAll");
+                console.time("return");
                 db.close();
                 resolve(req.result.map(dbMsg => dbMsg.message));
+                console.timeEnd("return");
             };
     
             req.onerror = reject;

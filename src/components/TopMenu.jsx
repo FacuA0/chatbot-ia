@@ -161,7 +161,8 @@ function TopMenu({config, proxyError, setConfig, setError, exportChat}) {
             <Menu
                 anchorEl={anchorMenu}
                 open={anchorMenu}
-                onClose={closeMenu}>
+                onClose={closeMenu}
+                disableScrollLock={true}>
                 <MenuItem disabled={models.length == 0}
                     onClick={openModel}>Modelo: {config.model.name}</MenuItem>
                 <MenuItem onClick={openTool}>Herramientas</MenuItem>
@@ -171,13 +172,15 @@ function TopMenu({config, proxyError, setConfig, setError, exportChat}) {
             <Menu
                 anchorEl={anchorModel}
                 open={anchorModel}
-                onClose={closeModel}>
+                onClose={closeModel}
+                disableScrollLock={true}>
                 {modelList}
             </Menu>
             <Menu
                 anchorEl={anchorTool}
                 open={anchorTool}
-                onClose={closeTool}>
+                onClose={closeTool}
+                disableScrollLock={true}>
                 {toolList}
             </Menu>
             <ModalBox
