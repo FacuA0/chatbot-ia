@@ -20,7 +20,8 @@ function ModalBox({open, onClose, id, title, children}) {
     return <Modal
         open={open}
         onClose={onClose}
-        aria-labelledby={id + "-title"}>
+        aria-labelledby={id + "-title"}
+        disableScrollLock={true}>
         <Box sx={boxStyle}>
             <h4 id={id + "-title"} style={{marginTop: "4px"}}>
                 {title}
