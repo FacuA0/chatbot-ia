@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import ChatMessage from "./ChatMessage";
 import ActionLink from "./ActionLink";
 import Divider from '@mui/material/Divider'
@@ -11,21 +11,25 @@ function MessageList({msgList, currentMsg, error, generating, actions, highlight
 
     let tryAgain = () => actions.tryAgain();
 
-    let newMsgList = [], aiMsg = null;
-    for (let msg of msgList) {
-        if (msg.role == "assistant") {
-            aiMsg = msg;
-            newMsgList.push(structuredClone(msg));
+    let newMsgList = useMemo(() => {
+        let newMsgList = [], aiMsg = null;
+        for (let msg of msgList) {
+            if (msg.role == "assistant") {
+                aiMsg = msg.extra?.tool_calls ? structuredClone(msg) : msg;
+                newMsgList.push(aiMsg);
+            }
+            else if (msg.role == "tool" && aiMsg) {
+                let call = aiMsg.extra?.tool_calls?.find?.(c => c.id === msg.extra?.tool_call_id);
+                if (call) 
+                    call.result = msg.message;
+            }
+            else {
+                aiMsg = null;
+                newMsgList.push(msg);
+            }
         }
-        else if (msg.role == "tool" && aiMsg) {
-            let call = aiMsg.extra?.tool_calls?.find?.(c => c.id === msg.extra?.tool_call_id);
-            call.result = msg.message;
-        }
-        else {
-            aiMsg = null;
-            newMsgList.push(msg);
-        }
-    }
+        return newMsgList;
+    }, [msgList]);
 
     msgList = newMsgList;
 

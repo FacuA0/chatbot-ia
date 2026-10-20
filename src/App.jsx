@@ -9,9 +9,7 @@ import './App.css'
 import { processToolCalls } from "./tools"
 import { generateFakeAnswer, getDefaultConfig, queryAI, 
     checkPublicProxy, setVariedInterval, newChat, 
-    getChatMessages,
-    storeNewMessage,
-    deleteMessages} from './utils'
+    getChatMessages, storeNewMessage, deleteMessages} from './utils'
 
 function App() {
     const [config, setConfig] = useState(getDefaultConfig);
@@ -27,6 +25,9 @@ function App() {
     const proxyCheckRef = useRef(null);
     const pendingRef = useRef(null);
     const rafRef = useRef(null);
+    const configRef = useRef(config);
+    const chatRef = useRef(chat);
+    const messageListRef = useRef(messageList);
 
     function setGlobalError(error) {
         if (error.message.includes("/corsdemo")) {
@@ -45,35 +46,41 @@ function App() {
     }
 
     const editMessage = useCallback((msgIdx) => {
-        const msg = messageList.find(msg => msg.idx == msgIdx);
+        const msg = messageListRef.current.find(msg => msg.idx == msgIdx);
         setEdition({
             idx: msgIdx,
             text: msg.message
         });
-    }, [messageList]);
+    }, []);
 
     const regenerateSince = useCallback(async (index) => {
-        let lastInd = messageList.findLastIndex(msg => msg.idx == index);
-        let prevMsgs = messageList.slice(0, lastInd);
+        let curMsgList = messageListRef.current;
+        let curChat = chatRef.current;
+
+        let lastInd = curMsgList.findLastIndex(msg => msg.idx == index);
+        let prevMsgs = curMsgList.slice(0, lastInd);
         if (prevMsgs.length == 0) return;
     
         setMessageList(prevMsgs);
-        await deleteMessages(chat, messageList[lastInd].idx, messageList[messageList.length - 1].idx);
+        await deleteMessages(curChat, curMsgList[lastInd].idx, curMsgList[curMsgList.length - 1].idx);
 
-        generateAnswer(chat, prevMsgs);
-    }, [config, chat, messageList]);
+        generateAnswer(curChat, prevMsgs);
+    }, []);
 
     const tryAgain = useCallback(async () => {
-        let lastInd = messageList.findLastIndex(msg => msg.role != "assistant") + 1;
-        let prevMsgs = messageList.slice(0, lastInd);
+        let curMsgList = messageListRef.current;
+        let curChat = chatRef.current;
+
+        let lastInd = curMsgList.findLastIndex(msg => msg.role != "assistant") + 1;
+        let prevMsgs = curMsgList.slice(0, lastInd);
         if (prevMsgs.length == 0) return;
 
         setMessageList(prevMsgs);
-        if (lastInd < messageList.length)
-            await deleteMessages(chat, messageList[lastInd].idx, messageList[messageList.length - 1].idx);
+        if (lastInd < curMsgList.length)
+            await deleteMessages(curChat, curMsgList[lastInd].idx, curMsgList[curMsgList.length - 1].idx);
 
-        generateAnswer(chat, prevMsgs);
-    }, [config, chat, messageList]);
+        generateAnswer(curChat, prevMsgs);
+    }, []);
 
     function goToEdit() {
         setHighlight(edition.idx);
@@ -91,15 +98,6 @@ function App() {
             generation.abort();
         }
     }
-
-    /*
-    function resetChat() {
-        setMessageList([]);
-        setGeneration(null);
-        setEdition(null);
-        setCurMessage(null);
-        setError(null);
-    }*/
 
     async function setCurrentChat(newChat) {
         if (newChat.id != null) {
@@ -163,6 +161,7 @@ function App() {
     }
 
     async function generateAnswer(curChat, msgList, options) {
+        const currentConfig = configRef.current;
         let abort = new AbortController();
         setGeneration(abort);
         setError(null);
@@ -176,7 +175,7 @@ function App() {
                 if (options?.fake)
                     ans = await generateFakeAnswer(options.text, updateCurrent, abort.signal);
                 else
-                    ans = await queryAI(msgList, config, updateCurrent, abort.signal);
+                    ans = await queryAI(msgList, currentConfig, updateCurrent, abort.signal);
                 
                 //console.debug("Four ", JSON.stringify(msgList));
                 cancelUpdates();
@@ -193,7 +192,7 @@ function App() {
                 if (ans.toolCalls.length > 0 && !abort.signal.aborted) {
                     iterate = true;
 
-                    let toolResults = await processToolCalls(config, ans.toolCalls, {abort});
+                    let toolResults = await processToolCalls(currentConfig, ans.toolCalls, {abort});
                     
                     for (let res of toolResults) {
                         msgList = addMessage(msgList, "tool", res.msg, null, null, {
@@ -297,6 +296,10 @@ function App() {
         {tryAgain, regenerateSince, editMessage}
     ), [tryAgain, regenerateSince, editMessage]);
 
+    useEffect(() => (configRef.current = config, undefined), [config]);
+    useEffect(() => (chatRef.current = chat, undefined), [chat]);
+    useEffect(() => (messageListRef.current = messageList, undefined), [messageList]);
+
     useEffect(() => {
         if (location.hostname != "localhost") {
             checkPublicProxy().then(active => {
@@ -333,7 +336,6 @@ function App() {
                 highlight={highlight}/>
             <InputBar
                 sendMsg={sendMessage}
-                /*resetChat={resetChat}*/
                 stopGen={stopGeneration}
                 stopEdit={stopEditing}
                 goToEdit={goToEdit}

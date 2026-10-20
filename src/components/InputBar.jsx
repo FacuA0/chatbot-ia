@@ -4,12 +4,11 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Tooltip from "@mui/material/Tooltip";
-//import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import StopIcon from '@mui/icons-material/Stop';
 import SmallIconButton from './SmallIconButton';
 
-function InputBar({sendMsg, resetChat, stopGen, stopEdit, goToEdit, generating, edition}) {
+function InputBar({sendMsg, stopGen, stopEdit, goToEdit, generating, edition}) {
     const [promptText, setPromptText] = useState("");
     const input = useRef();
 
@@ -45,13 +44,7 @@ function InputBar({sendMsg, resetChat, stopGen, stopEdit, goToEdit, generating, 
                 <StopIcon/>
             </IconButton>
         </Tooltip>
-    ) : (/*
-        <Tooltip title="Borrar chat">
-            <IconButton onClick={resetChat}>
-                <DeleteIcon/>
-            </IconButton>
-        </Tooltip>*/ <></>
-    )
+    ) : (<></>)
 
     const editingBar = edition != null ? (
         <div id='editing-bar'>
