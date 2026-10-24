@@ -1,9 +1,11 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, useRef, useEffect } from "react";
 import ChatMessage from "./ChatMessage";
 import ActionLink from "./ActionLink";
 import Divider from '@mui/material/Divider'
 
 function MessageList({msgList, currentMsg, error, generating, actions, highlight}) {
+    const listRef = useRef(null);
+    const prevMaxScrollRef = useRef(null);
     /*let newMsgList = [];
     for (let i = 0; i < msgList.length - 1; i++) {
         if (msgList[i].toolCalls && msgList[i + 1].tool)
@@ -61,8 +63,39 @@ function MessageList({msgList, currentMsg, error, generating, actions, highlight
         </div>
     ) : "";
 
+    useEffect(() => {
+        if (generating) {
+            let list = listRef.current;
+            let maxScroll = list.scrollHeight - list.clientHeight;
+            list.scroll({top: maxScroll, behavior: "instant"});
+            prevMaxScrollRef.current = maxScroll;
+        }
+        else {
+            prevMaxScrollRef.current = null;
+        }
+    }, [generating]);
+
+    useEffect(() => {
+        if (msgList && !generating) {
+            let list = listRef.current;
+            list.scroll({top: list.scrollHeight - list.clientHeight, behavior: "instant"});
+        }
+    }, [msgList]);
+
+    useEffect(() => {
+        if (currentMsg == null)
+            return;
+
+        let list = listRef.current;
+        let maxScroll = list.scrollHeight - list.clientHeight;
+        if (prevMaxScrollRef.current - list.scrollTop <= 1) {
+            list.scrollTo({top: maxScroll, behavior: "instant"});
+        }
+        prevMaxScrollRef.current = maxScroll;
+    }, [currentMsg]);
+
     return (
-        <div id="message-list">
+        <div id="message-list" ref={listRef}>
             {messageList}
             {curMsg}
             {errorMsg}
