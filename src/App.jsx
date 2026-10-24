@@ -8,7 +8,7 @@ import { Alert, Button } from '@mui/material'
 import './App.css'
 import { processToolCalls } from "./tools"
 import { generateFakeAnswer, getDefaultConfig, queryAI, 
-    checkPublicProxy, setVariedInterval, newChat, 
+    checkPublicProxy, setVariedInterval, newChat, closeDB,
     getChatMessages, storeNewMessage, deleteMessages} from './utils'
 
 function App() {
@@ -25,6 +25,7 @@ function App() {
     const proxyCheckRef = useRef(null);
     const pendingRef = useRef(null);
     const rafRef = useRef(null);
+    const dbRef = useRef(null);
     const configRef = useRef(config);
     const chatRef = useRef(chat);
     const messageListRef = useRef(messageList);
@@ -62,7 +63,15 @@ function App() {
         if (prevMsgs.length == 0) return;
     
         setMessageList(prevMsgs);
-        await deleteMessages(curChat, curMsgList[lastInd].idx, curMsgList[curMsgList.length - 1].idx);
+
+        try {
+            await deleteMessages(dbRef.current, curChat, curMsgList[lastInd].idx, curMsgList[curMsgList.length - 1].idx);
+        }
+        catch (err) {
+            setError(err);
+            closeDB(dbRef);
+            return;
+        }
 
         generateAnswer(curChat, prevMsgs);
     }, []);
@@ -76,8 +85,17 @@ function App() {
         if (prevMsgs.length == 0) return;
 
         setMessageList(prevMsgs);
-        if (lastInd < curMsgList.length)
-            await deleteMessages(curChat, curMsgList[lastInd].idx, curMsgList[curMsgList.length - 1].idx);
+
+        if (lastInd < curMsgList.length) {
+            try {
+                await deleteMessages(dbRef.current, curChat, curMsgList[lastInd].idx, curMsgList[curMsgList.length - 1].idx);
+            }
+            catch (err) {
+                setError(err);
+                closeDB(dbRef);
+                return;
+            }
+        }
 
         generateAnswer(curChat, prevMsgs);
     }, []);
@@ -136,9 +154,19 @@ function App() {
     
     async function sendMessage(text, options = {}) {
         let msgList = [...messageList];
+
         if (edition != null) {
             msgList = msgList.slice(0, edition.idx);
-            await deleteMessages(chat, messageList[edition.idx].idx, messageList[messageList.length - 1].idx);
+
+            try {
+                await deleteMessages(dbRef.current, chat, messageList[edition.idx].idx, messageList[messageList.length - 1].idx);
+            }
+            catch (err) {
+                setError(err);
+                closeDB(dbRef);
+                return;
+            }
+
             setEdition(null);
         }
         
@@ -151,9 +179,15 @@ function App() {
             curChat = newChat();
             setChat(curChat);
         }
-
-        storeNewMessage(curChat, msgList[msgList.length - 1])
-            .catch(err => console.error("No se pudo guardar el mensaje", err));
+        
+        try {
+            await storeNewMessage(dbRef.current, curChat, msgList[msgList.length - 1]);
+        }
+        catch (err) {
+            setError(err);
+            closeDB(dbRef);
+            return;
+        }
 
         //console.debug("Two ", JSON.stringify(msgList));
         
@@ -185,8 +219,7 @@ function App() {
                 let toolCallsObj = ans.toolCalls.length > 0 ? {tool_calls: ans.toolCalls} : {}
                 msgList = addMessage(msgList, "assistant", ans.message, ans.thinking, ans.details, toolCallsObj);
                 setMessageList(msgList);
-                storeNewMessage(curChat, msgList[msgList.length - 1])
-                    .catch(err => console.error("No se pudo guardar el mensaje", err));
+                await storeNewMessage(dbRef.current, curChat, msgList[msgList.length - 1]);
 
                 //console.debug("Five ", JSON.stringify(msgList));
                 if (ans.toolCalls.length > 0 && !abort.signal.aborted) {
@@ -198,8 +231,7 @@ function App() {
                         msgList = addMessage(msgList, "tool", res.msg, null, null, {
                             tool_call_id: res.id
                         });
-                        storeNewMessage(curChat, msgList[msgList.length - 1])
-                            .catch(err => console.error("No se pudo guardar el mensaje", err));
+                        await storeNewMessage(dbRef.current, curChat, msgList[msgList.length - 1]);
                     }
                     setMessageList(msgList);
                 }
@@ -222,6 +254,7 @@ function App() {
             }
         }
 
+        closeDB(dbRef);
         setGeneration(null);
     }
         

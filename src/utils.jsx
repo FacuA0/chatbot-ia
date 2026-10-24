@@ -404,8 +404,10 @@ export function deleteChat(chat) {
     chats.splice(chats.findIndex(ch => ch.id == chat.id), 1);
     localStorage.setItem("chats", JSON.stringify(chats));
 
-    deleteMessages(chat, 0, 2147483647)
-        .catch(err => console.error("Error al eliminar mensajes de chat borrado:", err));
+    let dbRef = {};
+    deleteMessages(dbRef, chat, 0, 2147483647)
+        .catch(err => console.error("Error al eliminar mensajes de chat borrado:", err))
+        .finally(() => closeDB(dbRef));
 }
 
 export function renameChat(chat, newName) {
@@ -423,28 +425,20 @@ export function getChats() {
 }
 
 export async function getChatMessages(chat) {
-    console.time("start");
     return new Promise(async (resolve, reject) => {
         let lowerBound = chat.id.toString().padStart(10, "0");
         let upperBound = (chat.id + 1).toString().padStart(10, "0");
 
         try {
-            console.timeEnd("start");
-            console.time("openDb");
             let db = await openDB();
-            console.timeEnd("openDb");
-            console.time("getAll");
             let req = db.transaction(["messages"])
                 .objectStore("messages")
                 .index("chatMsgIdx")
                 .getAll(IDBKeyRange.bound(lowerBound, upperBound, false, true));
             
             req.onsuccess = () => {
-                console.timeEnd("getAll");
-                console.time("return");
                 db.close();
                 resolve(req.result.map(dbMsg => dbMsg.message));
-                console.timeEnd("return");
             };
     
             req.onerror = reject;
@@ -456,11 +450,16 @@ export async function getChatMessages(chat) {
     });
 }
 
-function openDB() {
+function openDB(db) {
     return new Promise((res, rej) => {
+        if (db != null) {
+            res(db);
+            return;
+        }
+
         let dbRequest = indexedDB.open("ChatbotDB");
-        dbRequest.onerror = err => {
-            rej(err);
+        dbRequest.onerror = () => {
+            rej(dbRequest.error);
         };
         dbRequest.onupgradeneeded = evt => {
             let db = evt.target.result;
@@ -478,7 +477,7 @@ function openDB() {
     });
 }
 
-export function storeNewMessage(chat, message) {
+export function storeNewMessage(dbRef, chat, message) {
     let msgsObj = {
         chatId: chat.id,
         chatIdx: chat.id.toString().padStart(10, "0") + "-" + message.idx.toString().padStart(10, "0"),
@@ -487,13 +486,15 @@ export function storeNewMessage(chat, message) {
 
     return new Promise(async (resolve, reject) => {
         try {
-            let db = await openDB();
+            let db = await openDB(dbRef.current);
+            dbRef.current = db;
+
             let req = db.transaction(["messages"], "readwrite")
                 .objectStore("messages")
                 .add(msgsObj);
             
             req.onsuccess = () => {
-                db.close();
+                db.onerror = null;
                 resolve();
             };
     
@@ -506,14 +507,16 @@ export function storeNewMessage(chat, message) {
     });
 }
 
-export function deleteMessages(chat, firstMsg, lastMsg) {
+export function deleteMessages(dbRef, chat, firstMsg, lastMsg) {
     let chatPart = chat.id.toString().padStart(10, "0");
     let lowerChatIdx = chatPart + "-" + firstMsg.toString().padStart(10, "0");
     let upperChatIdx = chatPart + "-" + lastMsg.toString().padStart(10, "0");
 
     return new Promise(async (resolve, reject) => {
         try {
-            let db = await openDB();
+            let db = await openDB(dbRef.current);
+            dbRef.current = db;
+
             let store = db.transaction(["messages"], "readwrite")
                 .objectStore("messages");
 
@@ -531,7 +534,7 @@ export function deleteMessages(chat, firstMsg, lastMsg) {
                 }
 
                 Promise.all(proms)
-                    .then(() => (db.close(), null))
+                    .then(() => db.onerror = null)
                     .then(resolve)
                     .catch(reject);
             };
@@ -543,6 +546,11 @@ export function deleteMessages(chat, firstMsg, lastMsg) {
             reject(err);
         }
     });
+}
+
+export function closeDB(dbRef) {
+    dbRef.current?.close?.();
+    dbRef.current = null;
 }
 
 export function getDefaultConfig() {

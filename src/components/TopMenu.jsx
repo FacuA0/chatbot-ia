@@ -86,6 +86,8 @@ function TopMenu({config, proxyError, setConfig, setError, exportChat}) {
 
     function closeProxyConfig() {
         setProxyDialog(false);
+        let newURL = !config.proxy.endsWith("/") ? config.proxy + "/" : config.proxy;
+        changeProxyConfig(newURL);
     }
 
     function exportChat2() {
