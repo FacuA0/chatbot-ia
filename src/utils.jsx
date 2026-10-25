@@ -379,6 +379,48 @@ export async function getModels(config) {
     return models;
 }
 
+export function getDefaultConfig() {
+    let tools = {};
+    for (let tool of getAllTools()) {
+        tools[tool.name] = {
+            enabled: tool.defaultEnabled
+        };
+
+        for (let conf in (tool.config ?? {})) {
+            tools[tool.name][conf] = tool.config[conf].default;
+        };
+    }
+
+    return {
+        model: {
+            id: "kilo-auto/free",
+            name: "Auto Free",
+            api: API_OPENAI_COMPATIBLE,
+            endpoint: DEFAULT_ENDPOINT
+        },
+        tools,
+        proxy: location.hostname == "localhost" ? "http://localhost:5174/" : DEFAULT_PUBLIC_PROXY
+    };
+}
+
+export function getConfig() {
+    let stored = localStorage.getItem("chatbot-ia.config");
+    if (stored != null)
+        return JSON.parse(stored);
+
+    let config = getDefaultConfig();
+    localStorage.setItem("chatbot-ia.config", JSON.stringify(config));
+    return config;
+}
+
+export function saveConfig(config) {
+    localStorage.setItem("chatbot-ia.config", JSON.stringify(config));
+}
+
+export async function checkPublicProxy() {
+    return (await fetch(DEFAULT_PUBLIC_PROXY)).ok;
+}
+
 export function newChat() {
     let chats = getChats();
 
@@ -398,16 +440,9 @@ export function newChat() {
     return chat;
 }
 
-export function deleteChat(chat) {
-    let chats = getChats();
-
-    chats.splice(chats.findIndex(ch => ch.id == chat.id), 1);
-    localStorage.setItem("chats", JSON.stringify(chats));
-
-    let dbRef = {};
-    deleteMessages(dbRef, chat, 0, 2147483647)
-        .catch(err => console.error("Error al eliminar mensajes de chat borrado:", err))
-        .finally(() => closeDB(dbRef));
+export function getChats() {
+    let chats = JSON.parse(localStorage.getItem("chats") ?? "[]");
+    return chats;
 }
 
 export function renameChat(chat, newName) {
@@ -419,35 +454,16 @@ export function renameChat(chat, newName) {
     localStorage.setItem("chats", JSON.stringify(chats));
 }
 
-export function getChats() {
-    let chats = JSON.parse(localStorage.getItem("chats") ?? "[]");
-    return chats;
-}
+export function deleteChat(chat) {
+    let chats = getChats();
 
-export async function getChatMessages(chat) {
-    return new Promise(async (resolve, reject) => {
-        let lowerBound = chat.id.toString().padStart(10, "0");
-        let upperBound = (chat.id + 1).toString().padStart(10, "0");
+    chats.splice(chats.findIndex(ch => ch.id == chat.id), 1);
+    localStorage.setItem("chats", JSON.stringify(chats));
 
-        try {
-            let db = await openDB();
-            let req = db.transaction(["messages"])
-                .objectStore("messages")
-                .index("chatMsgIdx")
-                .getAll(IDBKeyRange.bound(lowerBound, upperBound, false, true));
-            
-            req.onsuccess = () => {
-                db.close();
-                resolve(req.result.map(dbMsg => dbMsg.message));
-            };
-    
-            req.onerror = reject;
-            db.onerror = reject;
-        }
-        catch (err) {
-            reject(err);
-        }
-    });
+    let dbRef = {};
+    deleteMessages(dbRef, chat, 0, 2147483647)
+        .catch(err => console.error("Error al eliminar mensajes de chat borrado:", err))
+        .finally(() => closeDB(dbRef));
 }
 
 function openDB(db) {
@@ -473,6 +489,32 @@ function openDB(db) {
         };
         dbRequest.onsuccess = evt => {
             res(evt.target.result);
+        }
+    });
+}
+
+export async function getChatMessages(chat) {
+    return new Promise(async (resolve, reject) => {
+        let lowerBound = chat.id.toString().padStart(10, "0");
+        let upperBound = (chat.id + 1).toString().padStart(10, "0");
+
+        try {
+            let db = await openDB();
+            let req = db.transaction(["messages"])
+                .objectStore("messages")
+                .index("chatMsgIdx")
+                .getAll(IDBKeyRange.bound(lowerBound, upperBound, false, true));
+            
+            req.onsuccess = () => {
+                db.close();
+                resolve(req.result.map(dbMsg => dbMsg.message));
+            };
+    
+            req.onerror = reject;
+            db.onerror = reject;
+        }
+        catch (err) {
+            reject(err);
         }
     });
 }
@@ -551,34 +593,6 @@ export function deleteMessages(dbRef, chat, firstMsg, lastMsg) {
 export function closeDB(dbRef) {
     dbRef.current?.close?.();
     dbRef.current = null;
-}
-
-export function getDefaultConfig() {
-    let tools = {};
-    for (let tool of getAllTools()) {
-        tools[tool.name] = {
-            enabled: tool.defaultEnabled
-        };
-
-        for (let conf in (tool.config ?? {})) {
-            tools[tool.name][conf] = tool.config[conf].default;
-        };
-    }
-
-    return {
-        model: {
-            id: "kilo-auto/free",
-            name: "Auto Free",
-            api: API_OPENAI_COMPATIBLE,
-            endpoint: DEFAULT_ENDPOINT
-        },
-        tools,
-        proxy: location.hostname == "localhost" ? "http://localhost:5174/" : DEFAULT_PUBLIC_PROXY
-    };
-}
-
-export async function checkPublicProxy() {
-    return (await fetch(DEFAULT_PUBLIC_PROXY)).ok;
 }
 
 async function* getStreamedEvents(events) {
