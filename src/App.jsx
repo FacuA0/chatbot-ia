@@ -7,12 +7,12 @@ import AlertDialog from './components/AlertDialog'
 import { Alert, Button } from '@mui/material'
 import './App.css'
 import { processToolCalls } from "./tools"
-import { generateFakeAnswer, getDefaultConfig, queryAI, 
+import { generateFakeAnswer, getConfig, saveConfig, queryAI,
     checkPublicProxy, setVariedInterval, newChat, closeDB,
     getChatMessages, storeNewMessage, deleteMessages} from './utils'
 
 function App() {
-    const [config, setConfig] = useState(getDefaultConfig);
+    const [config, setConfig] = useState(getConfig);
     const [generation, setGeneration] = useState(null);
     const [curMessage, setCurMessage] = useState(null);
     const [error, setError] = useState(null);
@@ -65,7 +65,7 @@ function App() {
         setMessageList(prevMsgs);
 
         try {
-            await deleteMessages(dbRef.current, curChat, curMsgList[lastInd].idx, curMsgList[curMsgList.length - 1].idx);
+            await deleteMessages(dbRef, curChat, curMsgList[lastInd].idx, curMsgList[curMsgList.length - 1].idx);
         }
         catch (err) {
             setError(err);
@@ -88,7 +88,7 @@ function App() {
 
         if (lastInd < curMsgList.length) {
             try {
-                await deleteMessages(dbRef.current, curChat, curMsgList[lastInd].idx, curMsgList[curMsgList.length - 1].idx);
+                await deleteMessages(dbRef, curChat, curMsgList[lastInd].idx, curMsgList[curMsgList.length - 1].idx);
             }
             catch (err) {
                 setError(err);
@@ -115,6 +115,11 @@ function App() {
         if (generation) {
             generation.abort();
         }
+    }
+
+    function changeConfig(newConfig) {
+        setConfig(newConfig);
+        saveConfig(newConfig);
     }
 
     async function setCurrentChat(newChat) {
@@ -159,7 +164,7 @@ function App() {
             msgList = msgList.slice(0, edition.idx);
 
             try {
-                await deleteMessages(dbRef.current, chat, messageList[edition.idx].idx, messageList[messageList.length - 1].idx);
+                await deleteMessages(dbRef, chat, messageList[edition.idx].idx, messageList[messageList.length - 1].idx);
             }
             catch (err) {
                 setError(err);
@@ -181,7 +186,7 @@ function App() {
         }
         
         try {
-            await storeNewMessage(dbRef.current, curChat, msgList[msgList.length - 1]);
+            await storeNewMessage(dbRef, curChat, msgList[msgList.length - 1]);
         }
         catch (err) {
             setError(err);
@@ -219,7 +224,7 @@ function App() {
                 let toolCallsObj = ans.toolCalls.length > 0 ? {tool_calls: ans.toolCalls} : {}
                 msgList = addMessage(msgList, "assistant", ans.message, ans.thinking, ans.details, toolCallsObj);
                 setMessageList(msgList);
-                await storeNewMessage(dbRef.current, curChat, msgList[msgList.length - 1]);
+                await storeNewMessage(dbRef, curChat, msgList[msgList.length - 1]);
 
                 //console.debug("Five ", JSON.stringify(msgList));
                 if (ans.toolCalls.length > 0 && !abort.signal.aborted) {
@@ -231,7 +236,7 @@ function App() {
                         msgList = addMessage(msgList, "tool", res.msg, null, null, {
                             tool_call_id: res.id
                         });
-                        await storeNewMessage(dbRef.current, curChat, msgList[msgList.length - 1]);
+                        await storeNewMessage(dbRef, curChat, msgList[msgList.length - 1]);
                     }
                     setMessageList(msgList);
                 }
@@ -354,7 +359,7 @@ function App() {
                 <TopMenu 
                     config={config}
                     proxyError={proxyBanner}
-                    setConfig={setConfig}
+                    setConfig={changeConfig}
                     setError={setGlobalError}
                     exportChat={exportChat}/>
             </header>
