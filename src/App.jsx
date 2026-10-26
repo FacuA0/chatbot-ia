@@ -4,7 +4,8 @@ import TopMenu from './components/TopMenu'
 import MessageList from './components/MessageList'
 import InputBar from './components/InputBar'
 import AlertDialog from './components/AlertDialog'
-import { Alert, Button } from '@mui/material'
+import Alert from '@mui/material/Alert'
+import Button from '@mui/material/Button'
 import './App.css'
 import { processToolCalls } from "./tools"
 import { generateFakeAnswer, getConfig, saveConfig, queryAI,
