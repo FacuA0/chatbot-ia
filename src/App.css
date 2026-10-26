@@ -31,6 +31,15 @@ main {
   scroll-behavior: smooth;
 }
 
+#new-chat {
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
 #msg-error {
   color: red;
   font-weight: bold;

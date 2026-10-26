@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Button from '@mui/material/Button';
 import Tooltip from "@mui/material/Tooltip";
 import Drawer from "@mui/material/Drawer";
 import Divider from '@mui/material/Divider';
@@ -7,23 +8,24 @@ import ListItem from '@mui/material/ListItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemButton from '@mui/material/ListItemButton';
+import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import IconButton from '@mui/material/IconButton';
 import TextField from "@mui/material/TextField";
 import MenuIcon from '@mui/icons-material/Menu';
 import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
+import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import Box from "@mui/material/Box";
 import ModalBox from "./ModalBox";
-import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
-import { getChats, deleteChat, renameChat } from '../utils';
 import SmallIconButton from "./SmallIconButton";
+import { getChats, deleteChat, renameChat } from '../utils';
 
 function ChatList({curChat, setCurChat}) {
     const [openDrawer, setOpenDrawer] = useState(false);
     const [chats, setChats] = useState(getChats);
     const [chatRename, setChatRename] = useState("");
     const [renameModal, setRenameModal] = useState(null);
+    const [deleteModal, setDeleteModal] = useState(null);
 
     const toggleDrawer = newOpen => () => {
         setOpenDrawer(newOpen);
@@ -31,23 +33,30 @@ function ChatList({curChat, setCurChat}) {
 
     const setNewChat = () => setCurChat({});
     const setPreviousChat = chat => () => setCurChat(chat);
-    const eraseChat = chat => () => {
-        if (curChat.id == chat.id) {
+    const eraseChat = () => {
+        if (curChat.id == deleteModal.id) {
             setNewChat();
         }
 
-        deleteChat(chat);
+        deleteChat(deleteModal);
+        setDeleteModal(null);
         setChats(getChats());
     };
     const renameChat2 = chat => () => {
         setRenameModal(chat);
         setChatRename(chat.title);
     };
+    const deleteChat2 = chat => () => {
+        setDeleteModal(chat);
+    };
     const closeRenameModal = () => {
-        renameChat(curChat, chatRename);
+        renameChat(renameModal, chatRename);
         setChatRename("");
         setRenameModal(null);
         setChats(getChats());
+    };
+    const closeDeleteModal = () => {
+        setDeleteModal(null);
     };
     
     const createChat = 
@@ -76,8 +85,8 @@ function ChatList({curChat, setCurChat}) {
                     icon={EditIcon} />
                 <SmallIconButton
                     title="Eliminar chat"
-                    onClick={eraseChat(chat)}
-                    icon={CloseIcon} />
+                    onClick={deleteChat2(chat)}
+                    icon={DeleteIcon} />
             </ListItemSecondaryAction>
         </ListItem>
     );
@@ -95,7 +104,7 @@ function ChatList({curChat, setCurChat}) {
                 </IconButton>
             </Tooltip>
             <Drawer open={openDrawer} onClose={toggleDrawer(false)} disableScrollLock={true}>
-                <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
+                <Box sx={{ width: 280 }} role="presentation" onClick={toggleDrawer(false)}>
                     <h2 style={{marginLeft: "1rem"}}>Historial de chats</h2>
                     <List>
                         {createChat}
@@ -118,6 +127,21 @@ function ChatList({curChat, setCurChat}) {
                     label="Nuevo nombre para el chat"
                     onChange={e => setChatRename(e.target.value)}
                     value={chatRename}/>
+            </ModalBox>
+            <ModalBox
+                open={deleteModal}
+                onClose={closeDeleteModal}
+                id="chat-delete"
+                title="Eliminar chat">
+                <p>¿Está seguro de que quiere eliminar "{deleteModal?.title}"?</p>
+                <div id='chat-delete-buttons' style={{marginTop: "1em", display: "flex", justifyContent: "end"}}>
+                    <Button sx={{marginRight: 2}} variant='text' onClick={closeDeleteModal}>
+                        Cancelar
+                    </Button>
+                    <Button variant='contained' color='error' onClick={eraseChat}>
+                        Eliminar chat
+                    </Button>
+                </div>
             </ModalBox>
         </div>
     );

@@ -1,6 +1,8 @@
 import { memo, useMemo, useRef, useEffect } from "react";
 import ChatMessage from "./ChatMessage";
 import ActionLink from "./ActionLink";
+import Alert from '@mui/material/Alert'
+import AlertTitle from "@mui/material/AlertTitle";
 import Divider from '@mui/material/Divider'
 
 function MessageList({msgList, currentMsg, error, generating, actions, highlight}) {
@@ -50,18 +52,25 @@ function MessageList({msgList, currentMsg, error, generating, actions, highlight
 
     //console.log("Updated list", currentMsg);
 
+    const newChat = msgList.length == 0 ? (
+        <div id="new-chat">
+            <h2>Nuevo chat</h2>
+            <p>Envía un mensaje para iniciar una nueva conversación.</p>
+        </div>
+    ) : <></>;
+
     const curMsg = currentMsg != null ? <>
         <Divider/>
         <ChatMessage message={currentMsg}/>
     </> : "";
 
     const errorMsg = error != null ? (
-        <div id="msg-error">
-            Hubo un error realizando la solicitud.&#x20;
-            {(!error.noRetry ? (<ActionLink action={tryAgain}>Vuelva a intentarlo.</ActionLink>) : (<></>))}
-            &#x20;{error + ""}
-        </div>
-    ) : "";
+        <Alert severity="error">
+            <AlertTitle>Hubo un error realizando la solicitud.&#x20;
+            <ActionLink action={tryAgain} show={!error.noRetry}>Vuelva a intentarlo.</ActionLink></AlertTitle>
+            {error + ""}
+        </Alert>
+    ) : <></>;
 
     useEffect(() => {
         if (generating) {
@@ -96,6 +105,7 @@ function MessageList({msgList, currentMsg, error, generating, actions, highlight
 
     return (
         <div id="message-list" ref={listRef}>
+            {newChat}
             {messageList}
             {curMsg}
             {errorMsg}

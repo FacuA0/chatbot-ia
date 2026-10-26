@@ -29,10 +29,11 @@ function InputBar({sendMsg, stopGen, stopEdit, goToEdit, generating, edition}) {
 
     function handleKeyDown(evt) {
         if (!evt.shiftKey && evt.key == "Enter") {
+            evt.preventDefault();
             if (!evt.ctrlKey) {
                 sendMessage();
             }
-            else {
+            else if (location.hostname == "localhost") {
                 sendFakeMessage();
             }
         }
@@ -70,7 +71,7 @@ function InputBar({sendMsg, stopGen, stopEdit, goToEdit, generating, edition}) {
                 <TextField
                     variant='outlined'
                     size='small'
-                    label="Prompt"
+                    label="Mensaje"
                     value={promptText}
                     inputRef={input}
                     onChange={e => setPromptText(e.target.value)}
