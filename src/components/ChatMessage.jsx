@@ -10,6 +10,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ReplayIcon from '@mui/icons-material/Replay';
 import EditIcon from '@mui/icons-material/Edit';
 import CopyIcon from '@mui/icons-material/ContentCopy';
+import CheckIcon from '@mui/icons-material/Check';
 import SmallIconButton from "./SmallIconButton";
 import { getTool } from "../tools";
 import ActionLink from "./ActionLink";
@@ -36,6 +37,7 @@ const markdown = markdownit({
 
 function ChatMessage({message, generating, actions, highlight}) {
     let [detailsOpen, setDetailsOpen] = useState(false);
+    let [copied, setCopied] = useState(false);
     let messageRef = useRef();
     let thinkingRef = useRef();
     let msgDivRef = useRef();
@@ -60,6 +62,11 @@ function ChatMessage({message, generating, actions, highlight}) {
             document.execCommand("copy", false);
             messageRef.current.contentEditable = prevContentEditable;
         }
+        
+        setCopied(true);
+        setTimeout(() => {
+            setCopied(false);
+        }, 1200);
     }
 
     //console.log(message);
@@ -125,7 +132,7 @@ function ChatMessage({message, generating, actions, highlight}) {
         <SmallIconButton
             title="Copiar"
             onClick={copyMessage}
-            icon={CopyIcon} />
+            icon={!copied ? CopyIcon : CheckIcon} />
         <SmallIconButton
             title="Regenerar"
             onClick={() => actions.regenerateSince(message.idx)}
@@ -135,7 +142,7 @@ function ChatMessage({message, generating, actions, highlight}) {
         <SmallIconButton
             title="Copiar"
             onClick={copyMessage}
-            icon={CopyIcon} />
+            icon={!copied ? CopyIcon : CheckIcon} />
         <SmallIconButton
             title="Editar"
             onClick={() => actions.editMessage(message.idx)}
