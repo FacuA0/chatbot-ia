@@ -17,6 +17,34 @@ export function getAllTools() {
     return tools;
 }
 
+export function parseToolsForDisplay(calls) {
+    return calls.map(tool => {
+        let args, argsStr, result;
+        result = tool.result ? tool.result : "";
+        try {
+            args = JSON.parse(tool.function.arguments);
+            let toolObj = getTool(null, tool.function.name);
+            if (toolObj) {
+                argsStr = toolObj.getCallSummary(args);
+            }
+            else {
+                argsStr = Object.entries(args).map(e => e.join(": ")).join(", ");
+            }
+        }
+        catch (err) {
+            console.assert(err.message.startsWith("JSON.parse"), err);
+            let calling = !tool.result ? "Llamando" : "Cargando";
+            argsStr = calling + "... (" + tool?.function?.arguments + ")";
+        }
+
+        return {
+            name: tool.function.name,
+            args: argsStr,
+            result
+        }
+    });
+}
+
 export async function processToolCalls(config, calls, extra) {
     let promises = [];
 

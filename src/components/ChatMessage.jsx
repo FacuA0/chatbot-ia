@@ -12,7 +12,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import CopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 import SmallIconButton from "./SmallIconButton";
-import { getTool } from "../tools";
+import { parseToolsForDisplay } from "../tools";
 import ActionLink from "./ActionLink";
 import ModalBox from "./ModalBox";
 
@@ -85,31 +85,7 @@ function ChatMessage({message, generating, actions, highlight}) {
         </Accordion>
     ) : [];
 
-    const tools = message.extra?.tool_calls ? message.extra.tool_calls.map(tool => {
-        let args, argsStr, result;
-        result = tool.result ? tool.result : "";
-        try {
-            args = JSON.parse(tool.function.arguments);
-            let toolObj = getTool(null, tool.function.name);
-            if (toolObj) {
-                argsStr = toolObj.getCallSummary(args);
-            }
-            else {
-                argsStr = Object.entries(args).map(e => e.join(": ")).join(", ");
-            }
-        }
-        catch (err) {
-            console.assert(err.message.startsWith("JSON.parse"), err);
-            let calling = !tool.result ? "Llamando" : "Cargando";
-            argsStr = calling + "... (" + tool?.function?.arguments + ")";
-        }
-
-        return {
-            name: tool.function.name,
-            args: argsStr,
-            result
-        }
-    }) : [];
+    const tools = message.extra?.tool_calls ? parseToolsForDisplay(message.extra.tool_calls) : [];
 
     //console.log("Message", Object.assign({}, message), tools.slice());
 
