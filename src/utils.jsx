@@ -6,20 +6,20 @@ const API_OPENAI = "@ai-sdk/openai";
 const DEFAULT_ENDPOINT = "https://api.kilo.ai/api/gateway";
 const DEFAULT_PUBLIC_PROXY = "https://cors-anywhere.herokuapp.com/";
 
-export async function queryAI(chat, config, updateCurrent, abort) {
+export async function queryAI(chat, config, mcpRef, updateCurrent, abort) {
     if (config.model.api == API_OPENAI_COMPATIBLE) {
-        return queryOpenAICompatEndpoint(chat, config, updateCurrent, abort);
+        return queryOpenAICompatEndpoint(chat, config, mcpRef, updateCurrent, abort);
     }
     else if (config.model.api == API_OPENAI) {
-        return queryOpenAIEndpoint(chat, config, updateCurrent, abort);
+        return queryOpenAIEndpoint(chat, config, mcpRef, updateCurrent, abort);
     }
 
     console.error("No soportado:", config.model.api);
     throw new Error("Proveedor incompatible.");
 }
 
-async function queryOpenAIEndpoint(chat, config, updateCurrent, abort) {
-    let tools = getAvailableTools(config).map(t => ({
+async function queryOpenAIEndpoint(chat, config, mcpRef, updateCurrent, abort) {
+    let tools = getAvailableTools(config, mcpRef).map(t => ({
         type: "function",
         name: t.name,
         description: t.description,
@@ -168,8 +168,8 @@ async function queryOpenAIEndpoint(chat, config, updateCurrent, abort) {
     };
 }
 
-async function queryOpenAICompatEndpoint(chat, config, updateCurrent, abort) {
-    let tools = getAvailableTools(config).map(t => ({
+async function queryOpenAICompatEndpoint(chat, config, mcpRef, updateCurrent, abort) {
+    let tools = getAvailableTools(config, mcpRef).map(t => ({
         type: "function",
         function: {
             name: t.name,
@@ -360,6 +360,45 @@ export async function generateFakeAnswer(text, updateCurrent, abort) {
     };
 }
 
+export async function discoverMCPServer(config, url) {
+    try {
+        let res = await fetch(config.proxy + url, {
+            method: "POST",
+            headers: {
+                "Accept": "application/json; text/event-stream",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: 1,
+                method: "tools/list",
+                params: {
+                    _meta: {
+                        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                        "io.modelcontextprotocol/clientInfo": {
+                            name: "chatbot-ia",
+                            version: "0.1"
+                        },
+                        "io.modelcontextprotocol/clientCapabilities": {}
+                    }
+                }
+            })
+        });
+                
+        if (res.headers.get("Content-Type") == "application/json") {
+            console.log(await res.json());
+        }
+        else {
+            for await (let o of getStreamedEvents(res.body)) {
+                console.log(o);
+            }
+        }
+    }
+    catch (e) {
+        console.error(e);
+    }
+}
+
 export async function getModels(config) {
     let res = await fetch(config.proxy + "https://models.dev/api.json");
     if (!res.ok)
@@ -399,6 +438,7 @@ export function getDefaultConfig() {
             endpoint: DEFAULT_ENDPOINT
         },
         tools,
+        mcp: [],
         proxy: location.hostname == "localhost" ? "http://localhost:5174/" : DEFAULT_PUBLIC_PROXY
     };
 }
@@ -595,7 +635,7 @@ export function closeDB(dbRef) {
     dbRef.current = null;
 }
 
-async function* getStreamedEvents(events) {
+export async function* getStreamedEvents(events) {
     let decoder = new TextDecoder();
     let textPart = "";
 

@@ -5,7 +5,7 @@ import Alert from '@mui/material/Alert'
 import AlertTitle from "@mui/material/AlertTitle";
 import Divider from '@mui/material/Divider'
 
-function MessageList({msgList, currentMsg, error, generating, actions, highlight}) {
+function MessageList({msgList, currentMsg, error, generating, actions, highlight, mcpRef}) {
     const listRef = useRef(null);
     const prevMaxScrollRef = useRef(null);
     /*let newMsgList = [];
@@ -43,7 +43,8 @@ function MessageList({msgList, currentMsg, error, generating, actions, highlight
             message={msg}
             generating={generating}
             actions={actions}
-            highlight={highlight}/>
+            highlight={highlight}
+            mcpRef={mcpRef}/>
     ));
 
     for (let i = 1; i < messageList.length; i += 2) {
@@ -61,7 +62,7 @@ function MessageList({msgList, currentMsg, error, generating, actions, highlight
 
     const curMsg = currentMsg != null ? <>
         <Divider/>
-        <ChatMessage message={currentMsg}/>
+        <ChatMessage message={currentMsg} mcpRef={mcpRef}/>
     </> : "";
 
     const errorMsg = error != null ? (

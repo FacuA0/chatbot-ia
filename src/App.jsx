@@ -7,10 +7,10 @@ import AlertDialog from './components/AlertDialog'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import './App.css'
-import { processToolCalls } from "./tools"
+import { processToolCalls, initializeMcp } from "./tools"
 import { generateFakeAnswer, getConfig, saveConfig, queryAI,
     checkPublicProxy, setVariedInterval, newChat, closeDB,
-    getChatMessages, storeNewMessage, deleteMessages} from './utils'
+    getChatMessages, storeNewMessage, deleteMessages } from './utils'
 
 function App() {
     const [config, setConfig] = useState(getConfig);
@@ -27,6 +27,7 @@ function App() {
     const pendingRef = useRef(null);
     const rafRef = useRef(null);
     const dbRef = useRef(null);
+    const mcpRef = useRef(null);
     const configRef = useRef(config);
     const chatRef = useRef(chat);
     const messageListRef = useRef(messageList);
@@ -201,7 +202,7 @@ function App() {
     }
 
     async function generateAnswer(curChat, msgList, options) {
-        const currentConfig = configRef.current;
+        const curConfig = configRef.current;
         let abort = new AbortController();
         setGeneration(abort);
         setError(null);
@@ -215,7 +216,7 @@ function App() {
                 if (options?.fake)
                     ans = await generateFakeAnswer(options.text, updateCurrent, abort.signal);
                 else
-                    ans = await queryAI(msgList, currentConfig, updateCurrent, abort.signal);
+                    ans = await queryAI(msgList, curConfig, mcpRef, updateCurrent, abort.signal);
                 
                 //console.debug("Four ", JSON.stringify(msgList));
                 cancelUpdates();
@@ -231,7 +232,7 @@ function App() {
                 if (ans.toolCalls.length > 0 && !abort.signal.aborted) {
                     iterate = true;
 
-                    let toolResults = await processToolCalls(currentConfig, ans.toolCalls, {abort});
+                    let toolResults = await processToolCalls(curConfig, mcpRef, ans.toolCalls, {abort});
                     
                     for (let res of toolResults) {
                         msgList = addMessage(msgList, "tool", res.msg, null, null, {
@@ -350,6 +351,10 @@ function App() {
         }
     }, []);
 
+    useEffect(() => {
+        mcpRef.current = initializeMcp(config);
+    }, []);
+
     return (
         <main>
             <header>
@@ -360,6 +365,7 @@ function App() {
                 <TopMenu 
                     config={config}
                     proxyError={proxyBanner}
+                    mcpRef={mcpRef}
                     setConfig={changeConfig}
                     setError={setGlobalError}
                     exportChat={exportChat}/>
@@ -372,7 +378,8 @@ function App() {
                 error={error}
                 generating={generation != null}
                 actions={actions}
-                highlight={highlight}/>
+                highlight={highlight}
+                mcpRef={mcpRef}/>
             <InputBar
                 sendMsg={sendMessage}
                 stopGen={stopGeneration}

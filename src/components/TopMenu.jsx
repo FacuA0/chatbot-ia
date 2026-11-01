@@ -8,19 +8,22 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CheckIcon from '@mui/icons-material/Check';
+import AddIcon from '@mui/icons-material/Add';
 import MenuIcon from '@mui/icons-material/MoreVert';
 import { getModels } from "../utils";
-import { getAllTools } from "../tools";
+import { getAllTools, addMcpServer, removeMcpServer } from "../tools";
 import SmallIconButton from './SmallIconButton';
 import ModalBox from './ModalBox';
+import { Divider } from '@mui/material';
 
-function TopMenu({config, proxyError, setConfig, setError, exportChat}) {
+function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) {
     const [anchorMenu, setAnchorMenu] = useState(null);
     const [anchorModel, setAnchorModel] = useState(null);
     const [anchorTool, setAnchorTool] = useState(null);
     const [models, setModels] = useState([]);
     const [configDialog, setConfigDialog] = useState(null);
     const [proxyDialog, setProxyDialog] = useState(false);
+    const [mcpDialog, setMcpDialog] = useState(null);
 
     function openMenu(evt) {
         setAnchorMenu(evt.currentTarget);
@@ -68,6 +71,10 @@ function TopMenu({config, proxyError, setConfig, setError, exportChat}) {
         setProxyDialog(true);
     }
 
+    function openMcpConfig() {
+        setMcpDialog("");
+    }
+
     function changeToolConfig(configKey, newValue) {
         let copy = structuredClone(config);
         copy.tools[configDialog.name][configKey] = newValue;
@@ -80,6 +87,13 @@ function TopMenu({config, proxyError, setConfig, setError, exportChat}) {
         setConfig(copy);
     }
 
+    function removeMcp(index) {
+        let copy = structuredClone(config);
+        copy.mcp = copy.mcp.filter((_, i) => i != index);
+        setConfig(copy);
+        removeMcpServer(mcpRef, index);
+    }
+
     function closeToolConfig() {
         setConfigDialog(null);
     }
@@ -88,6 +102,17 @@ function TopMenu({config, proxyError, setConfig, setError, exportChat}) {
         setProxyDialog(false);
         let newURL = !config.proxy.endsWith("/") ? config.proxy + "/" : config.proxy;
         changeProxyConfig(newURL);
+    }
+
+    function closeMcpConfig() {
+        setMcpDialog(null);
+        if (!mcpDialog)
+            return;
+        
+        let copy = structuredClone(config);
+        copy.mcp = [...copy.mcp, mcpDialog];
+        setConfig(copy);
+        addMcpServer(config, mcpRef, mcpDialog);
     }
 
     function exportChat2() {
@@ -117,6 +142,13 @@ function TopMenu({config, proxyError, setConfig, setError, exportChat}) {
                     icon={SettingsIcon}
                     onClick={() => openToolConfig(t)}/>
             ) : null}
+        </MenuItem>
+    ));
+
+    let mcpList = config.mcp.map((url, i) => (
+        <MenuItem key={i}
+            onClick={() => removeMcp(i)}>
+            {url}
         </MenuItem>
     ));
 
@@ -184,6 +216,16 @@ function TopMenu({config, proxyError, setConfig, setError, exportChat}) {
                 onClose={closeTool}
                 disableScrollLock={true}>
                 {toolList}
+                <Divider/>
+                {mcpList}
+                <Divider/>
+                <MenuItem 
+                    onClick={() => openMcpConfig()}>
+                    <ListItemIcon>
+                        <AddIcon fontSize="small" />
+                    </ListItemIcon>
+                    {"Añadir MCP"}
+                </MenuItem>
             </Menu>
             <ModalBox
                 open={configDialog != null}
@@ -216,6 +258,19 @@ function TopMenu({config, proxyError, setConfig, setError, exportChat}) {
                     onClick={() => changeProxyConfig("http://localhost:5174/")}>
                     Usar localhost
                 </Button> : null}
+            </ModalBox>
+            <ModalBox
+                open={mcpDialog != null}
+                onClose={closeMcpConfig}
+                id="mcp-config"
+                title="Añadir MCP">
+                <TextField
+                    id="field-url-mcp"
+                    variant="outlined"
+                    fullWidth
+                    label="URL de MCP"
+                    onChange={e => setMcpDialog(e.target.value)}
+                    value={mcpDialog}/>
             </ModalBox>
         </div>
     );

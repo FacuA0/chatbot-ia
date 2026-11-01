@@ -35,7 +35,7 @@ const markdown = markdownit({
     }
 });
 
-function ChatMessage({message, generating, actions, highlight}) {
+function ChatMessage({message, generating, actions, highlight, mcpRef}) {
     let [detailsOpen, setDetailsOpen] = useState(false);
     let [copied, setCopied] = useState(false);
     let messageRef = useRef();
@@ -85,7 +85,7 @@ function ChatMessage({message, generating, actions, highlight}) {
         </Accordion>
     ) : [];
 
-    const tools = message.extra?.tool_calls ? parseToolsForDisplay(message.extra.tool_calls) : [];
+    const tools = message.extra?.tool_calls ? parseToolsForDisplay(message.extra.tool_calls, mcpRef) : [];
 
     //console.log("Message", Object.assign({}, message), tools.slice());
 
