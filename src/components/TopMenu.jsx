@@ -91,7 +91,7 @@ function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) 
         let copy = structuredClone(config);
         copy.mcp = copy.mcp.filter((_, i) => i != index);
         setConfig(copy);
-        removeMcpServer(mcpRef, index);
+        removeMcpServer(config, mcpRef, index);
     }
 
     function closeToolConfig() {
@@ -106,9 +106,9 @@ function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) 
 
     function closeMcpConfig() {
         setMcpDialog(null);
-        if (!mcpDialog)
+        if (!mcpDialog || config.mcp.includes(mcpDialog))
             return;
-        
+
         let copy = structuredClone(config);
         copy.mcp = [...copy.mcp, mcpDialog];
         setConfig(copy);

@@ -7,7 +7,7 @@ import AlertDialog from './components/AlertDialog'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import './App.css'
-import { processToolCalls, initializeMcp } from "./tools"
+import { processToolCalls, initializeMcp, cleanMcp } from "./tools"
 import { generateFakeAnswer, getConfig, saveConfig, queryAI,
     checkPublicProxy, setVariedInterval, newChat, closeDB,
     getChatMessages, storeNewMessage, deleteMessages } from './utils'
@@ -353,6 +353,7 @@ function App() {
 
     useEffect(() => {
         mcpRef.current = initializeMcp(config);
+        return () => cleanMcp(config, mcpRef);
     }, []);
 
     return (

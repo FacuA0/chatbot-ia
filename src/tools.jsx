@@ -108,59 +108,122 @@ export function initializeMcp(config) {
     };
 }
 
+export function cleanMcp(config, mcpRef) {
+    mcpRef.current.servers.forEach(server => server.close(config));
+    mcpRef.current = null;
+}
+
 export function addMcpServer(config, mcpRef, url) {
     mcpRef.current.servers.push(new McpServer(config, url));
 }
 
-export function removeMcpServer(mcpRef, i) {
-    mcpRef.current.servers.splice(i, 1);
+export function removeMcpServer(config, mcpRef, i) {
+    mcpRef.current.servers.splice(i, 1)[0].close(config);
+}
+
+async function parseMcpResponse(res) {
+    let contentType = res.headers.get("Content-Type") ?? "";
+    if (contentType.startsWith("application/json")) {
+        return await res.json();
+    }
+    else if (contentType.startsWith("text/event-stream")) {
+        for await (let event of getStreamedEvents(res.body)) {
+            let json = JSON.parse(event.content);
+            if (!json.id)
+                continue;
+            
+            return json;
+        }
+        throw new McpRequestError(res.status, "Stream closed without response");
+    }
+    else {
+        throw new McpRequestError(res.status, "Invalid content type: " + contentType);
+    }
 }
 
 class McpServer {
+    static UNSUPPORTED_VERSION_ERROR = -32022;
+    static MISSING_CAPABILITY_ERROR = -32021;
+    static HEADER_MISMATCH_ERROR = -32020;
+
     url = "";
     idCount = 1;
     tools = [];
     name = "";
-    mcpVersion = "2026-07-28";
+    legacy = null;
     active = true;
+    abortInit = null;
 
     constructor(config, url) {
         this.url = url;
+        this.init(config);
+    }
 
-        let server = this;
-        (async () => {
-            try {
-                let res = await server.request(config, "server/discover", {});
-                let json = await res.json();
-                console.log(res);
+    async init(config) {
+        this.abortInit = new AbortController();
+        try {
+            let res = await this.request(config, "server/discover", {}, this.abortInit.signal);
+            console.log(res);
 
-                if (json.error) {
-                    throw new Error(json.error.message ?? JSON.stringify(json.error));
+            this.name = res._meta?.["io.modelcontextprotocol/serverInfo"]?.name;
+
+            let toolRes = await this.request(config, "tools/list", {}, this.abortInit.signal);
+            this.tools = toolRes.tools.map(t => new McpTool(this, t));
+        }
+        catch (error) {
+            console.error(error);
+            if (error instanceof McpRequestError) {
+                if (this.isLegacy(error)) {
+                    this.legacy = new LegacyMcpServer(this.url);
+                    try {
+                        let data = await this.legacy.init(config, this.abortInit.signal);
+                        this.name = data.name;
+                        this.tools = data.tools.map(t => new McpTool(this, t));
+                        this.abortInit = null;
+                        return;
+                    }
+                    catch (e) {
+                        console.error(e);
+                        error = e;
+                    }
                 }
+            }
 
-                let toolRes = await server.request(config, "tools/list", {});
-                let toolJson = await toolRes.json();
-                server.tools = toolJson.tools.map(t => new McpTool(server, t));
-            }
-            catch (e) {
-                console.error(e);
-                server.active = false;
-            }
-        })();
+            this.active = false;
+        }
+        this.abortInit = null;
     }
 
     getTools() {
-        return this.tools;
+        return this.active ? this.tools : [];
+    }
+
+    close(config) {
+        if (this.abortInit)
+            this.abortInit.abort();
+
+        if (this.legacy)
+            this.legacy.close(config);
+    }
+
+    isLegacy(error) {
+        let status = error.status;
+        let code = error.err?.code;
+        return status == 400 && code != McpServer.UNSUPPORTED_VERSION_ERROR &&
+            code != McpServer.MISSING_CAPABILITY_ERROR && code != McpServer.HEADER_MISMATCH_ERROR;
     }
 
     async request(config, method, params, signal = undefined) {
+        if (this.legacy) {
+            return (await this.legacy.request(config, method, params, signal)).res;
+        }
+
         try {
             let mcpName = params.name ?? params.uri;
-            console.log("signal", signal);
             let res = await fetch(config.proxy + this.url, {
                 method: "POST",
                 headers: {
-                    "Accept": "application/json; text/event-stream",
+                    "Accept": "application/json, text/event-stream",
                     "Content-Type": "application/json",
                     "MCP-Protocol-Version": "2026-07-28",
                     "Mcp-Method": method,
@@ -185,49 +248,150 @@ class McpServer {
                 signal
             });
 
+            this.idCount++;
+
             if (!res.ok) {
                 let err = await res.text(), json;
                 try {
                     json = JSON.parse(err);
-                    console.error(json.error?.data);
                 }
                 catch (e) {
-                    throw new Error(err);
+                    throw new McpRequestError(res.status, err);
                 }
-                throw new Error(json.error.message);
+                throw new McpRequestError(res.status, json);
             }
+
+            let json = await parseMcpResponse(res);
+            if (!json.result) {
+                throw new McpRequestError(res.status, json);
+            }
+
+            return json.result;
+        }
+        catch (e) {
+            console.error(e);
+            throw e;
+        }
+    }
+}
+
+class LegacyMcpServer {
+    url = "";
+    idCount = 1;
+    mcpVersion = "2025-11-25";
+    sessionId = null;
+    
+    constructor(url) {
+        this.url = url;
+    }
+
+    async init(config, signal) {
+        let res = await this.request(config, "initialize", {
+            protocolVersion: "2025-11-25",
+            clientInfo: {
+                name: "chatbot-ia",
+                version: "0.1"
+            },
+            capabilities: {}
+        }, signal);
+        console.log(res);
+
+        // TODO: support a few more versions
+        if (res.res.protocolVersion != "2025-11-25")
+            throw new Error("Incompatible version");
+
+        let name = res.res.serverInfo?.name;
+
+        if (res.headers.has("MCP-Session-Id")) {
+            this.sessionId = res.headers.get("MCP-Session-Id");
+        }
+
+        await this.notify(config, "notifications/initialized", null, signal);
+
+        let toolRes = (await this.request(config, "tools/list", null, signal)).res;
+        return {
+            name,
+            tools: toolRes.tools
+        };
+    }
+    
+    async request(config, method, params, signal = undefined) {
+        try {
+            let sessionHead = this.sessionId ? {"MCP-Session-Id": this.sessionId} : {};
+            let res = await fetch(config.proxy + this.url, {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json, text/event-stream",
+                    "Content-Type": "application/json",
+                    "MCP-Protocol-Version": this.mcpVersion,
+                    ...sessionHead
+                },
+                body: JSON.stringify({
+                    jsonrpc: "2.0",
+                    id: this.idCount,
+                    method,
+                    ...(params != null ? {params} : {})
+                }),
+                signal
+            });
 
             this.idCount++;
-                    
-            if (res.headers.get("Content-Type").startsWith("application/json")) {
-                let json = await res.json();
-                console.log(json);
-                if (!json.result) {
-                    if (json.error) {
-                        console.error("Err data", json.error.data);
-                        throw new Error(json.error.message ?? JSON.stringify(json.error));
-                    }
-                    throw new Error("No 'result' JSON key.");
-                }
 
-                return json.result;
+            if (!res.ok) {
+                let err = await res.text(), json;
+                try {
+                    json = JSON.parse(err);
+                }
+                catch (e) {
+                    throw new McpRequestError(res.status, err);
+                }
+                throw new McpRequestError(res.status, json);
             }
-            else {
-                for await (let event of getStreamedEvents(res.body)) {
-                    console.log(event);
-                    if (!event.id) 
-                        continue;
-                    
-                    if (!event.result) {
-                        if (event.error) {
-                            console.error("Err data", event.error.data);
-                            throw new Error(event.error.message ?? JSON.stringify(event.error));
-                        }
-                        throw new Error("No 'result' JSON key.");
-                    }
 
-                    return event.result;
+            let json = await parseMcpResponse(res);
+            if (!json.result) {
+                throw new McpRequestError(res.status, json);
+            }
+
+            return {
+                headers: res.headers,
+                res: json.result
+            };
+        }
+        catch (e) {
+            console.error(e);
+            throw e;
+        }
+    }
+    
+    async notify(config, method, params, signal = undefined) {
+        try {
+            let sessionHead = this.sessionId ? {"MCP-Session-Id": this.sessionId} : {};
+            let res = await fetch(config.proxy + this.url, {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json, text/event-stream",
+                    "Content-Type": "application/json",
+                    "MCP-Protocol-Version": this.mcpVersion,
+                    ...sessionHead
+                },
+                body: JSON.stringify({
+                    jsonrpc: "2.0",
+                    method,
+                    ...(params != null ? {params} : {})
+                }),
+                signal
+            });
+
+            if (!res.ok) {
+                let err = await res.text(), json;
+                try {
+                    json = JSON.parse(err);
                 }
+                catch (e) {
+                    throw new McpRequestError(res.status, err);
+                }
+                throw new McpRequestError(res.status, json);
             }
         }
         catch (e) {
@@ -236,86 +400,48 @@ class McpServer {
         }
     }
     
-    async legacyRequest(config, method, params, signal = undefined) {
+    async deleteSession(config) {
         try {
-            let mcpName = params.name ?? params.uri;
-            console.log("signal", signal);
-            let res = await fetch(config.proxy + this.url, {
-                method: "POST",
+            let sessionHead = this.sessionId ? {"MCP-Session-Id": this.sessionId} : {};
+            await fetch(config.proxy + this.url, {
+                method: "DELETE",
                 headers: {
                     "Accept": "application/json; text/event-stream",
-                    "Content-Type": "application/json",
-                    "MCP-Protocol-Version": "2026-07-28",
-                    "Mcp-Method": method,
-                    ...(mcpName ? {"Mcp-Name": mcpName} : {})
+                    "MCP-Protocol-Version": this.mcpVersion,
+                    ...sessionHead
                 },
-                body: JSON.stringify({
-                    jsonrpc: "2.0",
-                    id: this.idCount,
-                    method,
-                    params: {
-                        ...params,
-                        _meta: {
-                            "io.modelcontextprotocol/protocolVersion": "2026-07-28",
-                            "io.modelcontextprotocol/clientInfo": {
-                                name: "chatbot-ia",
-                                version: "0.1"
-                            },
-                            "io.modelcontextprotocol/clientCapabilities": {}
-                        }
-                    }
-                }),
-                signal
             });
-
-            if (!res.ok) {
-                let err = await res.text(), json;
-                try {
-                    json = JSON.parse(err);
-                    console.error(json.error?.data);
-                }
-                catch (e) {
-                    throw new Error(err);
-                }
-                throw new Error(json.error.message);
-            }
-
-            this.idCount++;
-                    
-            if (res.headers.get("Content-Type").startsWith("application/json")) {
-                let json = await res.json();
-                console.log(json);
-                if (!json.result) {
-                    if (json.error) {
-                        console.error("Err data", json.error.data);
-                        throw new Error(json.error.message ?? JSON.stringify(json.error));
-                    }
-                    throw new Error("No 'result' JSON key.");
-                }
-
-                return json.result;
-            }
-            else {
-                for await (let event of getStreamedEvents(res.body)) {
-                    console.log(event);
-                    if (!event.id) 
-                        continue;
-                    
-                    if (!event.result) {
-                        if (event.error) {
-                            console.error("Err data", event.error.data);
-                            throw new Error(event.error.message ?? JSON.stringify(event.error));
-                        }
-                        throw new Error("No 'result' JSON key.");
-                    }
-
-                    return event.result;
-                }
-            }
         }
         catch (e) {
             console.error(e);
-            throw e;
         }
+    }
+
+    close(config) {
+        if (this.sessionId)
+            this.deleteSession(config);
+    }
+}
+
+class McpRequestError extends Error {
+    constructor(status, body) {
+        super(McpRequestError.getMessage(body));
+        this.status = status;
+
+        if (typeof body == "object") {
+            if (body.error)
+                this.err = body.error;
+            else 
+                this.body = JSON.stringify(body);
+        }
+        else if (typeof body == "string")
+            this.body = body;
+    }
+
+    static getMessage(body) {
+        if (typeof body == "object")
+            return body.error?.message ?? JSON.stringify(body);
+        else
+            return body;
     }
 }

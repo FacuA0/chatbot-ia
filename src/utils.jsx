@@ -360,45 +360,6 @@ export async function generateFakeAnswer(text, updateCurrent, abort) {
     };
 }
 
-export async function discoverMCPServer(config, url) {
-    try {
-        let res = await fetch(config.proxy + url, {
-            method: "POST",
-            headers: {
-                "Accept": "application/json; text/event-stream",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                jsonrpc: "2.0",
-                id: 1,
-                method: "tools/list",
-                params: {
-                    _meta: {
-                        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
-                        "io.modelcontextprotocol/clientInfo": {
-                            name: "chatbot-ia",
-                            version: "0.1"
-                        },
-                        "io.modelcontextprotocol/clientCapabilities": {}
-                    }
-                }
-            })
-        });
-                
-        if (res.headers.get("Content-Type") == "application/json") {
-            console.log(await res.json());
-        }
-        else {
-            for await (let o of getStreamedEvents(res.body)) {
-                console.log(o);
-            }
-        }
-    }
-    catch (e) {
-        console.error(e);
-    }
-}
-
 export async function getModels(config) {
     let res = await fetch(config.proxy + "https://models.dev/api.json");
     if (!res.ok)
@@ -444,11 +405,15 @@ export function getDefaultConfig() {
 }
 
 export function getConfig() {
-    let stored = localStorage.getItem("chatbot-ia.config");
-    if (stored != null)
-        return JSON.parse(stored);
-
     let config = getDefaultConfig();
+    let stored = localStorage.getItem("chatbot-ia.config");
+    if (stored != null) {
+        return {
+            ...config,
+            ...JSON.parse(stored)
+        };
+    }
+
     localStorage.setItem("chatbot-ia.config", JSON.stringify(config));
     return config;
 }
