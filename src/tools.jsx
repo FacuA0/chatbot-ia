@@ -13,7 +13,7 @@ export function getTool(config, name, mcpRef) {
 
 export function getAvailableTools(config, mcpRef) {
     let availableTools = defaultTools.filter(tool => config.tools[tool.name].enabled);
-    return [...availableTools, ...getMcpTools(mcpRef)];
+    return [...availableTools, ...mcpRef.current.getAllTools()];
 }
 
 export function getDefaultTools() {
@@ -21,13 +21,7 @@ export function getDefaultTools() {
 }
 
 export function getAllTools(mcpRef) {
-    return [...defaultTools, ...getMcpTools(mcpRef)];
-}
-
-function getMcpTools(mcpRef = {}) {
-    if (!mcpRef.current) return [];
-
-    return mcpRef.current.servers.map(s => s.getTools()).flat();
+    return [...defaultTools, ...mcpRef.current.getAllTools()];
 }
 
 export function parseToolsForDisplay(calls, mcpRef) {
@@ -106,23 +100,52 @@ function parseToolCallArgs(args) {
     }
 }
 
-export function initializeMcp(config) {
-    return {
-        servers: config.mcp.map(url => new McpServer(config, url))
-    };
-}
+export class McpServers {
+    servers = [];
+    listeners = [];
 
-export function cleanMcp(config, mcpRef) {
-    mcpRef.current.servers.forEach(server => server.close(config));
-    mcpRef.current = null;
-}
+    initializeMcp(config) {
+        this.servers = config.mcp.map(url => new McpServer(config, () => this.serverChanged(), url));
+        this.serverChanged();
+    }
 
-export function addMcpServer(config, mcpRef, url) {
-    mcpRef.current.servers.push(new McpServer(config, url));
-}
+    cleanMcp(config) {
+        this.servers.forEach(server => server.close(config));
+        this.servers = [];
+        this.serverChanged();
+    }
 
-export function removeMcpServer(config, mcpRef, i) {
-    mcpRef.current.servers.splice(i, 1)[0].close(config);
+    addMcpServer(config, url) {
+        this.servers.push(new McpServer(config, () => this.serverChanged(), url));
+        this.serverChanged();
+    }
+
+    removeMcpServer(config, i) {
+        this.servers.splice(i, 1)[0].close(config);
+        this.serverChanged();
+    }
+    
+    getMcpServersInfo() {
+        return this.servers.map(s => s.getInfo());
+    }
+
+    getAllTools() {
+        return this.servers.map(s => s.getTools()).flat();
+    }
+
+    addListener(func) {
+        this.listeners.push(func);
+    }
+
+    removeListener(func) {
+        let i = this.listeners.indexOf(func);
+        if (i >= 0)
+            this.listeners.splice(i, 1);
+    }
+
+    serverChanged() {
+        this.listeners.forEach(listen => listen());
+    }
 }
 
 async function parseMcpResponse(res) {
@@ -157,9 +180,11 @@ class McpServer {
     legacy = null;
     active = true;
     abortInit = null;
+    onupdate = null;
 
-    constructor(config, url) {
+    constructor(config, update, url) {
         this.url = url;
+        this.onupdate = update;
         this.init(config);
     }
 
@@ -173,9 +198,10 @@ class McpServer {
 
             let toolRes = await this.request(config, "tools/list", {}, this.abortInit.signal);
             this.tools = toolRes.tools.map(t => new McpTool(this, t));
+            this.onupdate?.();
         }
         catch (error) {
-            console.error(error);
+            console.warn("Error while connecting to MCP server", this.url, error + "");
             if (error instanceof McpRequestError) {
                 if (this.isLegacy(error)) {
                     this.legacy = new LegacyMcpServer(this.url);
@@ -184,16 +210,18 @@ class McpServer {
                         this.name = data.name;
                         this.tools = data.tools.map(t => new McpTool(this, t));
                         this.abortInit = null;
+                        this.onupdate?.();
                         return;
                     }
                     catch (e) {
-                        console.error(e);
+                        console.warn("Error while connecting to legacy MCP server", this.url, error + "");
                         error = e;
                     }
                 }
             }
 
             this.active = false;
+            this.onupdate?.();
         }
         this.abortInit = null;
     }
@@ -273,9 +301,20 @@ class McpServer {
             return json.result;
         }
         catch (e) {
-            console.error(e);
+            if (!e.toString().includes("AbortError"))
+                console.error("McpServer request", e);
             throw e;
         }
+    }
+
+    getInfo() {
+        return {
+            name: this.name,
+            url: this.url,
+            active: this.active,
+            legacy: this.legacy != null,
+            tools: [...this.getTools()]
+        };
     }
 }
 
@@ -363,7 +402,8 @@ class LegacyMcpServer {
             };
         }
         catch (e) {
-            console.error(e);
+            if (!e.toString().includes("AbortError"))
+                console.error("LegacyMcpServer request", e);
             throw e;
         }
     }
@@ -399,7 +439,8 @@ class LegacyMcpServer {
             }
         }
         catch (e) {
-            console.error(e);
+            if (!e.toString().includes("AbortError"))
+                console.error("McpServer notify", e);
             throw e;
         }
     }
@@ -417,7 +458,7 @@ class LegacyMcpServer {
             });
         }
         catch (e) {
-            console.error(e);
+            console.warn("Not able to delete MCP session", e);
         }
     }
 

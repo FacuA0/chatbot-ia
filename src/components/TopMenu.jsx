@@ -2,17 +2,22 @@ import { useState, useEffect } from 'react';
 import Tooltip from "@mui/material/Tooltip";
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
 import ListItemIcon from '@mui/material/ListItemIcon';
+import ListSubheader from '@mui/material/ListSubheader';
 import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CheckIcon from '@mui/icons-material/Check';
-import AddIcon from '@mui/icons-material/Add';
+import McpIcon from '@mui/icons-material/Cable';
 import MenuIcon from '@mui/icons-material/MoreVert';
+import CloseIcon from '@mui/icons-material/Close';
 import { getModels } from "../utils";
-import { getDefaultTools, addMcpServer, removeMcpServer } from "../tools";
+import { getDefaultTools } from "../tools";
 import SmallIconButton from './SmallIconButton';
 import ModalBox from './ModalBox';
 
@@ -23,7 +28,9 @@ function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) 
     const [models, setModels] = useState([]);
     const [configDialog, setConfigDialog] = useState(null);
     const [proxyDialog, setProxyDialog] = useState(false);
-    const [mcpDialog, setMcpDialog] = useState(null);
+    const [mcpDialog, setMcpDialog] = useState(false);
+    const [addMcpDialog, setAddMcpDialog] = useState(null);
+    const [mcpServers, setMcpServers] = useState([]);
 
     function openMenu(evt) {
         setAnchorMenu(evt.currentTarget);
@@ -72,7 +79,11 @@ function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) 
     }
 
     function openMcpConfig() {
-        setMcpDialog("");
+        setMcpDialog(true);
+    }
+
+    function openAddMcpConfig() {
+        setAddMcpDialog("");
     }
 
     function changeToolConfig(configKey, newValue) {
@@ -91,7 +102,7 @@ function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) 
         let copy = structuredClone(config);
         copy.mcp = copy.mcp.filter((_, i) => i != index);
         setConfig(copy);
-        removeMcpServer(config, mcpRef, index);
+        mcpRef.current.removeMcpServer(config, index);
     }
 
     function closeToolConfig() {
@@ -105,14 +116,19 @@ function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) 
     }
 
     function closeMcpConfig() {
-        setMcpDialog(null);
-        if (!mcpDialog || config.mcp.includes(mcpDialog))
+        setMcpDialog(false);    
+    }
+
+    function closeAddMcpConfig() {
+        setAddMcpDialog(null);
+        if (!addMcpDialog || config.mcp.includes(addMcpDialog))
             return;
 
         let copy = structuredClone(config);
-        copy.mcp = [...copy.mcp, mcpDialog];
+        copy.mcp = [...copy.mcp, addMcpDialog];
         setConfig(copy);
-        addMcpServer(config, mcpRef, mcpDialog);
+        mcpRef.current.addMcpServer(config, addMcpDialog);
+        updateMcpServers();
     }
 
     function exportChat2() {
@@ -145,12 +161,37 @@ function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) 
         </MenuItem>
     ));
 
-    let mcpList = config.mcp.map((url, i) => (
-        <MenuItem key={i}
-            onClick={() => removeMcp(i)}>
-            {url}
-        </MenuItem>
-    ));
+    let mcpList = mcpServers.map((server, i) => {
+        let mcpTools = server.tools.map((tool, j) => 
+            <ListItem key={i + "-" + j}>
+                <ListItemText primary={tool.toolName}/>
+            </ListItem>
+        );
+
+        let active = <div style={{
+            display: "inline-block",
+            width: 8,
+            height: 8,
+            marginRight: 8,
+            borderRadius: 4,
+            backgroundColor: server.active ? "#0F0" : "#666"
+        }}></div>;
+
+        let mcpTitle = `${server.name || "Desconocido"} (${server.url})`;
+
+        let remove = 
+            <SmallIconButton
+                title="Quitar servidor"
+                icon={CloseIcon}
+                onClick={() => removeMcp(i)}/>;
+
+        return <li key={i}>
+            <ul>
+                <ListSubheader>{active}{mcpTitle}{remove}</ListSubheader>
+                {mcpTools}
+            </ul>
+        </li>;
+    });
 
     let configOptions = configDialog != null ? Object.entries(configDialog.config).map(conf => (
         conf[1].type == "string" ? (
@@ -169,6 +210,21 @@ function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) 
             </p>
         )
     )) : [];
+
+    function updateMcpServers() {
+        let mcpServers = mcpRef.current.getMcpServersInfo();
+        setMcpServers(mcpServers);
+    }
+
+    useEffect(() => {
+        updateMcpServers();
+        mcpRef.current.addListener(updateMcpServers);
+
+        return () => {
+            mcpRef.current.removeListener(updateMcpServers);
+            setMcpServers([]);
+        };
+    }, [config]);
 
     useEffect(() => {
         if (models.length > 0 || proxyError)
@@ -217,14 +273,12 @@ function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) 
                 disableScrollLock={true}>
                 {toolList}
                 <Divider/>
-                {mcpList}
-                <Divider/>
                 <MenuItem 
                     onClick={() => openMcpConfig()}>
                     <ListItemIcon>
-                        <AddIcon fontSize="small" />
+                        <McpIcon fontSize="small" />
                     </ListItemIcon>
-                    {"Añadir MCP"}
+                    Gestionar MCP
                 </MenuItem>
             </Menu>
             <ModalBox
@@ -260,17 +314,37 @@ function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) 
                 </Button> : null}
             </ModalBox>
             <ModalBox
-                open={mcpDialog != null}
+                open={mcpDialog}
                 onClose={closeMcpConfig}
                 id="mcp-config"
+                title="Gestionar MCP">
+                <List sx={{
+                    position: "relative",
+                    maxHeight: 300,
+                    overflow: "auto",
+                    "& ul": {padding: 0}}}
+                    subheader={<li/>}
+                    >
+                    {mcpList}
+                </List>
+                
+                <Button variant="text" 
+                    onClick={openAddMcpConfig}>
+                    Añadir servidor MCP
+                </Button>
+            </ModalBox>
+            <ModalBox
+                open={addMcpDialog != null}
+                onClose={closeAddMcpConfig}
+                id="add-mcp-config"
                 title="Añadir MCP">
                 <TextField
                     id="field-url-mcp"
                     variant="outlined"
                     fullWidth
                     label="URL de MCP"
-                    onChange={e => setMcpDialog(e.target.value)}
-                    value={mcpDialog}/>
+                    onChange={e => setAddMcpDialog(e.target.value)}
+                    value={addMcpDialog}/>
             </ModalBox>
         </div>
     );

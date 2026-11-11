@@ -81,11 +81,19 @@ const server = http.createServer((req, res) => {
     proxyReq.on("error", (err) => {
         console.error(err);
         if (!startedRes) {
+            let message = "502 Bad Gateway";
+            if (err.code == "ECONNREFUSED")
+                message = "Server error: Connection refused.";
+            if (err.code == "ECONNRESET")
+                message = "Server error: Connection reset.";
+            if (err.code == "ETIMEDOUT")
+                message = "Server error: Connection timed out.";
+
             res.writeHead(502, {
                 "Content-Type": "application/json",
                 "Access-Control-Allow-Origin": "*",
             });
-            res.end('{"error": {"message": "502 Bad Gateway"}}');
+            res.end(`{"error": {"message": "${message}"}}`);
         }
         else {
             res.destroy();

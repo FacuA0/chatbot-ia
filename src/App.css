@@ -42,6 +42,7 @@ main {
 
 #new-chat p {
   text-align: center;
+  padding: 0 1em;
 }
 
 #msg-error {

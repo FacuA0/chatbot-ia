@@ -7,7 +7,7 @@ import AlertDialog from './components/AlertDialog'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import './App.css'
-import { processToolCalls, initializeMcp, cleanMcp } from "./tools"
+import { processToolCalls, McpServers } from "./tools"
 import { generateFakeAnswer, getConfig, saveConfig, queryAI,
     checkPublicProxy, setVariedInterval, newChat, closeDB,
     getChatMessages, storeNewMessage, deleteMessages } from './utils'
@@ -27,7 +27,7 @@ function App() {
     const pendingRef = useRef(null);
     const rafRef = useRef(null);
     const dbRef = useRef(null);
-    const mcpRef = useRef(null);
+    const mcpRef = useRef(new McpServers());
     const configRef = useRef(config);
     const chatRef = useRef(chat);
     const messageListRef = useRef(messageList);
@@ -352,8 +352,8 @@ function App() {
     }, []);
 
     useEffect(() => {
-        mcpRef.current = initializeMcp(config);
-        return () => cleanMcp(config, mcpRef);
+        mcpRef.current.initializeMcp(config);
+        return () => mcpRef.current.cleanMcp(config);
     }, []);
 
     return (
