@@ -1,4 +1,4 @@
-import { getAvailableTools, getAllTools } from "./tools";
+import { getAvailableTools, getDefaultTools } from "./tools";
 
 const API_OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible";
 const API_OPENAI = "@ai-sdk/openai";
@@ -381,7 +381,7 @@ export async function getModels(config) {
 
 export function getDefaultConfig() {
     let tools = {};
-    for (let tool of getAllTools()) {
+    for (let tool of getDefaultTools()) {
         tools[tool.name] = {
             enabled: tool.defaultEnabled
         };

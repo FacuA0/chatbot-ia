@@ -16,6 +16,10 @@ export function getAvailableTools(config, mcpRef) {
     return [...availableTools, ...getMcpTools(mcpRef)];
 }
 
+export function getDefaultTools() {
+    return defaultTools;
+}
+
 export function getAllTools(mcpRef) {
     return [...defaultTools, ...getMcpTools(mcpRef)];
 }
@@ -37,7 +41,7 @@ export function parseToolsForDisplay(calls, mcpRef) {
                 argsStr = toolObj.getCallSummary(args);
             }
             else {
-                argsStr = Object.entries(args).map(e => e.join(": ")).join(", ");
+                argsStr = "[" + Object.entries(args).map(e => e.join("=")).join(", ") + "]";
             }
         }
         catch (err) {

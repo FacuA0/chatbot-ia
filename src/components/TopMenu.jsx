@@ -6,15 +6,15 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
 import MenuIcon from '@mui/icons-material/MoreVert';
 import { getModels } from "../utils";
-import { getAllTools, addMcpServer, removeMcpServer } from "../tools";
+import { getDefaultTools, addMcpServer, removeMcpServer } from "../tools";
 import SmallIconButton from './SmallIconButton';
 import ModalBox from './ModalBox';
-import { Divider } from '@mui/material';
 
 function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) {
     const [anchorMenu, setAnchorMenu] = useState(null);
@@ -126,7 +126,7 @@ function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) 
             onClick={() => changeModel(m)}>{m.name}</MenuItem>
     ));
 
-    let toolList = getAllTools().map((t, i) => (
+    let toolList = getDefaultTools().map((t, i) => (
         <MenuItem key={i} 
             role='menuitemcheckbox'
             selected={config.tools[t.name].enabled}

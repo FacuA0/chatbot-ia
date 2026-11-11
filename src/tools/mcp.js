@@ -4,14 +4,15 @@ export default class McpTool extends Tool {
     constructor(server, tool) {
         super();
 
-        this.name = tool.name;
+        this.name = server.name + "-" + tool.name;
+        this.toolName = tool.name;
         this.description = tool.description;
         this.parameters = tool.inputSchema;
         this.server = server;
     }
 
     async execute(args, config, extra) {
-        let name = this.name;
+        let name = this.toolName;
         let res = await this.server.request(config, "tools/call", {
             name: name,
             arguments: {
