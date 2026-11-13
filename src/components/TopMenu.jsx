@@ -177,7 +177,8 @@ function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) 
             backgroundColor: server.active ? "#0F0" : "#666"
         }}></div>;
 
-        let mcpTitle = `${server.name || "Desconocido"} (${server.url})`;
+        let legacy = server.legacy ? " (antiguo)" : "";
+        let mcpTitle = `${server.name || "Desconocido"} (${server.url})${legacy}`;
 
         let remove = 
             <SmallIconButton

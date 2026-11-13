@@ -23,12 +23,28 @@ export default class McpTool extends Tool {
             }
         }, extra.abort.signal);
 
-        return res.content.map(part => {
+        let content = res.content.map(part => {
             if (part.type == "text")
                 return part.text;
-            else
-                return "<Content type not supported: " + part.type + ">"
+            if (part.type == "resource_link")
+                return "Resource link: " + JSON.stringify(part);
+            if (part.type == "resource") {
+                let res = part.resource;
+                if (res.text && res.text.length > 32768)
+                    res.text = res.text.slice(0, 32678) + "...\n\nText truncated to 32768 chars.";
+                if (res.blob && res.blob.length > 1024)
+                    res.blob = res.blob.slice(0, 1024) + "... Blob truncated to 1024 chars.";
+
+                return "Resource: " + JSON.stringify(res);
+            }
+            
+            return "<MCP content type not supported: " + part.type + ">";
         }).join("\n\n");
+
+        if (res.isError)
+            throw new Error(content);
+
+        return content;
     }
 
     getCallSummary(args) {

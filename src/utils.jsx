@@ -440,13 +440,15 @@ export function newChat() {
     };
 
     chats.unshift(chat);
-    localStorage.setItem("chats", JSON.stringify(chats));
+    localStorage.setItem("chatbot-ia.chats", JSON.stringify(chats));
 
     return chat;
 }
 
 export function getChats() {
-    let chats = JSON.parse(localStorage.getItem("chats") ?? "[]");
+    migrateChats(); // Temporary
+
+    let chats = JSON.parse(localStorage.getItem("chatbot-ia.chats") ?? "[]");
     return chats;
 }
 
@@ -456,19 +458,27 @@ export function renameChat(chat, newName) {
     chat.title = newName;
 
     chats.splice(chats.findIndex(ch => ch.id == chat.id), 1, chat);
-    localStorage.setItem("chats", JSON.stringify(chats));
+    localStorage.setItem("chatbot-ia.chats", JSON.stringify(chats));
 }
 
 export function deleteChat(chat) {
     let chats = getChats();
 
     chats.splice(chats.findIndex(ch => ch.id == chat.id), 1);
-    localStorage.setItem("chats", JSON.stringify(chats));
+    localStorage.setItem("chatbot-ia.chats", JSON.stringify(chats));
 
     let dbRef = {};
     deleteMessages(dbRef, chat, 0, 2147483647)
         .catch(err => console.error("Error al eliminar mensajes de chat borrado:", err))
         .finally(() => closeDB(dbRef));
+}
+
+function migrateChats() {
+    let oldChats = localStorage.getItem("chats");
+    if (oldChats) {
+        localStorage.setItem("chatbot-ia.chats", oldChats);
+        localStorage.removeItem("chats");
+    }
 }
 
 function openDB(db) {
