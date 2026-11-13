@@ -216,6 +216,8 @@ function TopMenu({config, proxyError, mcpRef, setConfig, setError, exportChat}) 
         setMcpServers(mcpServers);
     }
 
+    // This will run before any server loading because of effect order with App.
+    // When the servers load, it will autoupdate.
     useEffect(() => {
         updateMcpServers();
         mcpRef.current.addListener(updateMcpServers);

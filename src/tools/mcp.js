@@ -4,7 +4,10 @@ export default class McpTool extends Tool {
     constructor(server, tool) {
         super();
 
-        this.name = server.name + "-" + tool.name;
+        let serverName = server.name.replace(/[^A-Za-z0-9_-]/g, "-")
+            .slice(0, 64 - ("-" + tool.name).length);
+
+        this.name = serverName + "-" + tool.name;
         this.toolName = tool.name;
         this.description = tool.description;
         this.parameters = tool.inputSchema;

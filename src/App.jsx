@@ -27,7 +27,7 @@ function App() {
     const pendingRef = useRef(null);
     const rafRef = useRef(null);
     const dbRef = useRef(null);
-    const mcpRef = useRef(new McpServers());
+    const mcpRef = useRef(McpServers.getInstance());
     const configRef = useRef(config);
     const chatRef = useRef(chat);
     const messageListRef = useRef(messageList);

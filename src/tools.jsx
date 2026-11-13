@@ -103,6 +103,13 @@ function parseToolCallArgs(args) {
 export class McpServers {
     servers = [];
     listeners = [];
+    static #instance = null;
+
+    static getInstance() {
+        if (this.#instance == null)
+            this.#instance = new McpServers();
+        return this.#instance;
+    }
 
     initializeMcp(config) {
         this.servers = config.mcp.map(url => new McpServer(config, () => this.serverChanged(), url));
@@ -241,7 +248,7 @@ class McpServer {
     isLegacy(error) {
         let status = error.status;
         let code = error.err?.code;
-        return status == 400 && code != McpServer.UNSUPPORTED_VERSION_ERROR &&
+        return (status == 400 || status == 200 && code != null) && code != McpServer.UNSUPPORTED_VERSION_ERROR &&
             code != McpServer.MISSING_CAPABILITY_ERROR && code != McpServer.HEADER_MISMATCH_ERROR;
     }
 
@@ -451,7 +458,7 @@ class LegacyMcpServer {
             await fetch(config.proxy + this.url, {
                 method: "DELETE",
                 headers: {
-                    "Accept": "application/json; text/event-stream",
+                    "Accept": "application/json, text/event-stream",
                     "MCP-Protocol-Version": this.mcpVersion,
                     ...sessionHead
                 },
