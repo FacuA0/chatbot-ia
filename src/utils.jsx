@@ -281,7 +281,7 @@ async function queryOpenAICompatEndpoint(chat, config, mcpRef, updateCurrent, ab
         //console.debug(4, json.choices, acumThink, "-", acumMsg, "-", acumTool.slice());
     }
 
-    if (!done) {
+    if (!done && !abort.aborted) {
         throw new Error("Unexpected end of stream without [DONE] mark.");
     }
 

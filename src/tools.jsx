@@ -87,6 +87,7 @@ async function processToolCall(config, mcpRef, call, extra) {
         return await tool.execute(args, config, extra);
     }
     catch (err) {
+        console.error(err);
         return "Tool error: " + err.message;
     }
 }
@@ -198,13 +199,14 @@ class McpServer {
     async init(config) {
         this.abortInit = new AbortController();
         try {
-            let res = await this.request(config, "server/discover", {}, this.abortInit.signal);
+            let res = await this.request(config, "server/discover", {}, {}, this.abortInit.signal);
             console.log(res);
 
             this.name = res._meta?.["io.modelcontextprotocol/serverInfo"]?.name;
 
-            let toolRes = await this.request(config, "tools/list", {}, this.abortInit.signal);
-            this.tools = toolRes.tools.map(t => new McpTool(this, t));
+            let toolRes = await this.request(config, "tools/list", {}, {}, this.abortInit.signal);
+            let tools = this.validateTools(toolRes.tools);
+            this.tools = tools.map(t => new McpTool(this, t));
             this.onupdate?.();
         }
         catch (error) {
@@ -214,8 +216,9 @@ class McpServer {
                     this.legacy = new LegacyMcpServer(this.url);
                     try {
                         let data = await this.legacy.init(config, this.abortInit.signal);
+                        let tools = this.validateTools(data.tools);
                         this.name = data.name;
-                        this.tools = data.tools.map(t => new McpTool(this, t));
+                        this.tools = tools.map(t => new McpTool(this, t));
                         this.abortInit = null;
                         this.onupdate?.();
                         return;
@@ -252,7 +255,7 @@ class McpServer {
             code != McpServer.MISSING_CAPABILITY_ERROR && code != McpServer.HEADER_MISMATCH_ERROR;
     }
 
-    async request(config, method, params, signal = undefined) {
+    async request(config, method, params, headers, signal = undefined) {
         if (this.legacy) {
             return (await this.legacy.request(config, method, params, signal)).res;
         }
@@ -266,7 +269,8 @@ class McpServer {
                     "Content-Type": "application/json",
                     "MCP-Protocol-Version": "2026-07-28",
                     "Mcp-Method": method,
-                    ...(mcpName ? {"Mcp-Name": mcpName} : {})
+                    ...(mcpName ? {"Mcp-Name": this.base64Encode(mcpName)} : {}),
+                    ...headers
                 },
                 body: JSON.stringify({
                     jsonrpc: "2.0",
@@ -280,7 +284,11 @@ class McpServer {
                                 name: "chatbot-ia",
                                 version: "0.1"
                             },
-                            "io.modelcontextprotocol/clientCapabilities": {}
+                            "io.modelcontextprotocol/clientCapabilities": {
+                                elicitation: {
+                                    form: {}
+                                }
+                            }
                         }
                     }
                 }),
@@ -312,6 +320,59 @@ class McpServer {
                 console.error("McpServer request", e);
             throw e;
         }
+    }
+
+    validateTools(tools) {
+        let filteredTools = [];
+
+        for (let tool of tools) {
+            let skip = false;
+            let props = tool.inputSchema.properties ?? {};
+            let mcpHeaders = [];
+
+            for (let def of Object.values(props)) {
+                if (!def["x-mcp-header"]) continue;
+
+                if (def.type != "string" && def.type != "integer" && def.type != "boolean")
+                    skip = true;
+
+                let header = def["x-mcp-header"];
+                if (!/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(header))
+                    skip = true;
+                if (mcpHeaders.find(h => h.toLowerCase() == header.toLowerCase()))
+                    skip = true;
+
+                if (skip) break;
+
+                mcpHeaders.push(header);
+            }
+            if (skip) {
+                console.warn("Tool", tool.name, "discarded due to invalid x-mcp-header.");
+                continue;
+            }
+
+            filteredTools.push(tool);
+        }
+
+        return filteredTools;
+    }
+
+    base64Encode(text) {
+        let convert = false;
+        let codes = [...text].map(c => c.codePointAt(0));
+
+        if (codes.findIndex(c => c < 0x20 && c != 0x09 || c > 0x7E) > -1)
+            convert = true;
+        if (text.startsWith(" ") || text.endsWith(" "))
+            convert = true;
+        if (text.startsWith("=?base64?") && text.endsWith("?="))
+            convert = true;
+
+        if (!convert) 
+            return text;
+
+        let bytes = Array.from(new TextEncoder().encode(text));
+        return "=?base64?" + btoa(String.fromCodePoint(...bytes)) + "?=";
     }
 
     getInfo() {

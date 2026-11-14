@@ -4,6 +4,7 @@ import TopMenu from './components/TopMenu'
 import MessageList from './components/MessageList'
 import InputBar from './components/InputBar'
 import AlertDialog from './components/AlertDialog'
+import ElicitationForm from './components/ElicitationForm'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import './App.css'
@@ -23,6 +24,8 @@ function App() {
     const [edition, setEdition] = useState(null);
     const [proxyAlert, setProxyAlert] = useState(false);
     const [proxyBanner, setProxyBanner] = useState(false);
+    const [elicitation, setElicitation] = useState(null);
+    const elicitQueue = useRef(null);
     const proxyCheckRef = useRef(null);
     const pendingRef = useRef(null);
     const rafRef = useRef(null);
@@ -232,7 +235,10 @@ function App() {
                 if (ans.toolCalls.length > 0 && !abort.signal.aborted) {
                     iterate = true;
 
-                    let toolResults = await processToolCalls(curConfig, mcpRef, ans.toolCalls, {abort});
+                    let toolResults = await processToolCalls(curConfig, mcpRef, ans.toolCalls, {
+                        abort,
+                        createElicitationForm
+                    });
                     
                     for (let res of toolResults) {
                         msgList = addMessage(msgList, "tool", res.msg, null, null, {
@@ -321,6 +327,36 @@ function App() {
             document.removeEventListener("visibilitychange", change);
         }
     }
+
+    async function createElicitationForm(name, url, requests) {
+        if (elicitQueue.current) {
+            await new Promise(res => {
+                elicitQueue.current.push(res);
+            });
+        }
+        elicitQueue.current = [];
+        
+        let data = await new Promise(res => {
+            setElicitation({
+                name,
+                url,
+                requests,
+                finishForm: (action, content) => res({action, content})
+            });
+        });
+
+        setElicitation(null);
+
+        if (elicitQueue.current.length > 0) {
+            elicitQueue.current.shift()();
+        }
+        
+        if (elicitQueue.current.length == 0) {
+            elicitQueue.current = null;
+        }
+
+        return data;
+    }
     
     const bannerDiv = proxyBanner ? <Alert 
         severity='info' 
@@ -393,7 +429,7 @@ function App() {
                 setOpen={setProxyAlert}
                 title="Es necesario habilitar el proxy público"
                 content={<>
-                    Este sitio utiliza un servidor intermediario (proxy) para poder usar servicios de IA y poder acceder a la mayoría de Internet.
+                    Este sitio utiliza un servidor intermediario (proxy) para poder usar servicios de IA y poder acceder a la mayoría de sitios de Internet.
                     Dado que es un servicio abierto y, con el fin de reducir abusos, este proxy requiere habilitar el acceso manualmente para este dispositivo.<br/><br/>
                     Para hacerlo, acceda al sitio y haga click en el botón "Request temporary access to the demo server"<br/><br/></>}
                 okText="Hecho">
@@ -402,6 +438,7 @@ function App() {
                     Acceder al sitio
                 </Button>
             </AlertDialog>
+            <ElicitationForm elicitData={elicitation}/>
         </main>
     );
 }
